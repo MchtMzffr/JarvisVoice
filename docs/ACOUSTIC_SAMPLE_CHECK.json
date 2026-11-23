@@ -1,0 +1,38 @@
+{
+  "version": "0.2.0",
+  "environment": "Linux; packaged synthetic EMA sample, not a real human or Windows microphone",
+  "input": "SES_ORNEGI.wav",
+  "input_sha256": "2859352294d91d233d0093fdfe197af13575bd910957bd341ad702c84fe60f75",
+  "observation": {
+    "schema_version": 1,
+    "duration_s": 1.96,
+    "rms_dbfs": -26.119,
+    "peak_dbfs": -7.421,
+    "clipping_pct": 0.0,
+    "speech_fraction": null,
+    "pause_fraction": null,
+    "words_per_minute": 122.45,
+    "f0_median_hz": 261.93,
+    "f0_iqr_hz": 64.87,
+    "f0_coverage": 0.5361,
+    "analysis_ms": 19.317,
+    "signal_valid": true,
+    "limitations": [
+      "dBFS dijital sinyal düzeyidir; fiziksel ses basıncı (SPL) veya gerçek ses yüksekliği değildir.",
+      "Mikrofon, mesafe ve tarayıcının kazanç/yankı/gürültü işlemleri ölçümleri etkiler.",
+      "F0, sınırlı sayıda kısa kareden hesaplanan yaklaşık periyodiklik ölçümüdür; harmonik ve oktav hataları olabilir.",
+      "F0 kapsaması örneklenen karelerin oranıdır; güven olasılığı veya konuşma doğrulaması değildir.",
+      "Duygu, kişilik, cinsiyet, kimlik veya sağlık değerlendirmesi yapılmaz.",
+      "Clipping oranı tam ölçeğe çok yakın dijital örnekleri sayar; donanımda kırpılmayı tek başına kanıtlamaz.",
+      "Kelime hızı ASR metni ve duraklamaları içeren süreyle hesaplanır; tanıma hataları sonucu değiştirir."
+    ],
+    "capture": {
+      "echo_cancellation": null,
+      "noise_suppression": null,
+      "auto_gain_control": null,
+      "sample_rate": null,
+      "channel_count": null
+    }
+  },
+  "claims": "Finite bounded pipeline output only; no human F0 ground truth, emotion or clinical validation"
+}

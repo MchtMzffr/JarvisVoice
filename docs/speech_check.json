@@ -1,0 +1,26 @@
+[
+  {
+    "input": "Merhaba Muzaffer. Bugün nasılsın?",
+    "recognized": "Merhaba Muzaffer, bugün nasılsın?",
+    "audio_seconds": 1.96,
+    "tts_ms": 275,
+    "asr_ms": 1845,
+    "platform": "Linux test environment; not user PC"
+  },
+  {
+    "input": "Bunu hatırla: Benim adım Muzaffer.",
+    "recognized": "Bunu hatırla benim adım Muzaffer",
+    "audio_seconds": 2.12,
+    "tts_ms": 413,
+    "asr_ms": 1682,
+    "platform": "Linux test environment; not user PC"
+  },
+  {
+    "input": "Üç çarpı kırk iki kaç eder?",
+    "recognized": "3 çarp 42 kaç eder",
+    "audio_seconds": 1.8,
+    "tts_ms": 322,
+    "asr_ms": 1682,
+    "platform": "Linux test environment; not user PC"
+  }
+]

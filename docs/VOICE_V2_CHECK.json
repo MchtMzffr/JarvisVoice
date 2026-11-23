@@ -1,0 +1,39 @@
+{
+  "version": "0.2.0",
+  "environment": "Linux test environment; not user Windows performance",
+  "telemetry_opt_out_before_import": true,
+  "prompt_cache": [
+    {
+      "text": "Önce tanışalım.",
+      "first_synthesis_ms": 323.82,
+      "cached_return_ms": 0.0025,
+      "audio_seconds": 0.88,
+      "pcm_identical": true
+    },
+    {
+      "text": "Sana nasıl hitap edeyim?",
+      "first_synthesis_ms": 220.39,
+      "cached_return_ms": 0.0028,
+      "audio_seconds": 1.32,
+      "pcm_identical": true
+    },
+    {
+      "text": "Yalnız adını veya kullanmak istediğin ismi söyleyebilirsin.",
+      "first_synthesis_ms": 420.18,
+      "cached_return_ms": 0.0048,
+      "audio_seconds": 3.04,
+      "pcm_identical": true
+    }
+  ],
+  "reference_check": {
+    "reference_text": "Bugün seninle sakin ve doğal bir şekilde konuşmak istiyorum.",
+    "recognized": "Bugün seninle sakin ve doğal bir şekilde konuşmak istiyorum.",
+    "word_error_rate": 0.0,
+    "tts_ms": 371.41,
+    "asr_ms": 1841.79,
+    "audio_seconds": 3.16
+  },
+  "cache_bytes": 503040,
+  "cache_limit_bytes": 8388608,
+  "tts_source_unchanged": true
+}

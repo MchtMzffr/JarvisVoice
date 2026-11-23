@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "date": "2026-11-23",
+  "environment": "Linux test environment",
+  "python": {
+    "passed": 94,
+    "failed": 0,
+    "skipped": 0,
+    "command": "python -m unittest discover -s tests -q"
+  },
+  "javascript": {
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0,
+    "command": "node --test tests/test_frontend.js tests/test_resampler.js"
+  },
+  "windows_0_2_end_to_end_tested": false,
+  "emotion_classifier_included": false,
+  "clinical_validation_performed": false
+}
