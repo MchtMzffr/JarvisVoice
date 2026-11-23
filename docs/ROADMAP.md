@@ -2,7 +2,7 @@
 
 Bu liste geliştirme sırasını ve kabul kanıtlarını tanımlar; tarih veya başarı taahhüdü değildir. Güncel sonuç [PROJECT_STATE.md](PROJECT_STATE.md) içinde tutulur.
 
-## 1. Windows güncellemeyi çalışır duruma getirme — aktif
+## 1. Windows güncellemeyi çalışır duruma getirme — kod/CI tamam, kullanıcı kabulü bekliyor
 
 - `update_jarvis.py`: port kontrolünde serbest/meşgul/bilinmeyen durumlarını ayır; Windows'ta kısa TCP connect yoklamasına bağımlılığı kaldır.
 - `tests/test_update_port.py`: Windows socket sahte nesneleriyle seçenek sırası, kapatma, hata kodları, belirsizlikte durma ve bağlantı kurulmamasını doğrula.
@@ -11,11 +11,13 @@ Bu liste geliştirme sırasını ve kabul kanıtlarını tanımlar; tarih veya b
 
 **Kabul:** ilgili otomatik testler ve kullanıcı Windows sonucu ayrı kaydedilir. Test sayısı gerçek Windows başarısının yerine geçmez.
 
-## 2. Depodan izlenebilir çalışma — aktif
+0.2.1 kodu yayımlandı; Windows'ta üç native port testi dahil 28 güncelleyici testi geçti. [Başarılı Windows/Linux koşumu](https://github.com/MchtMzffr/JarvisVoice/actions/runs/45194537357). Kullanıcının kurulu uygulamayı güncellemesi ve fiziksel ses akışı ayrı kabul adımıdır.
+
+## 2. Depodan izlenebilir çalışma — kuruldu, her değişiklikte sürdürülür
 
 - Kaynak, test, sürüm ve dağıtım bilgilerini aynı değişiklikte tut.
 - Kısa çalışma durumu, kararlar ve bilinen sorunları commit'lerle güncelle.
-- GitHub üzerinden odaklı Windows test otomasyonu için uygun iş akışını kur; çalışmayan veya atlanan kontrolleri yeşil sonuç gibi raporlama.
+- Kurulan Windows/Linux GitHub Actions iş akışını koru; çalışmayan veya atlanan kontrolleri yeşil sonuç gibi raporlama.
 - Sürüm paketlerinin içerik izin listesini koru; kişisel veriler, ağırlıklar, sanal ortamlar ve yedekler dağıtıma karışmamalı.
 
 **Kabul:** son commit'ten hangi sürümün üretildiği, neyin değiştiği ve hangi doğrulamanın yapıldığı anlaşılabilir olmalı.

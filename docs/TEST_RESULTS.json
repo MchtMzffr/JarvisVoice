@@ -19,5 +19,52 @@
   "windows_0_2_end_to_end_tested": false,
   "emotion_classifier_included": false,
   "clinical_validation_performed": false,
-  "native_windows_ci": "pending"
+  "native_windows_ci": "passed",
+  "local_tested_commit": "3595bed21e34beb5119561c2ed2466d09be08bd3",
+  "ci": {
+    "tested_commit": "574cdc462a10ad5bcc87afd6735aa21b504f5956",
+    "run_id": 45194537357,
+    "url": "https://github.com/MchtMzffr/JarvisVoice/actions/runs/45194537357",
+    "conclusion": "success",
+    "python_version": "3.11",
+    "node_version": "24",
+    "windows": {
+      "updater": {
+        "passed": 28,
+        "failed": 0,
+        "skipped": 0,
+        "native_socket_tests_included": 3
+      },
+      "profile": {
+        "passed": 10,
+        "failed": 0,
+        "skipped": 0
+      },
+      "javascript": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "compileall": "passed"
+    },
+    "linux": {
+      "updater": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 3
+      },
+      "profile": {
+        "passed": 10,
+        "failed": 0,
+        "skipped": 0
+      },
+      "javascript": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "compileall": "passed"
+    },
+    "scope": "Model-free updater, profile, frontend, resampling and syntax checks; no physical microphone, installer dialog, live Ollama or voice-model integration."
+  }
 }

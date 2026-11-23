@@ -2,7 +2,22 @@
 
 ## 0.2.1 hata düzeltmesinin doğrulanması
 
-23 Kasım 2026, Linux geliştirme ortamı: **110 Python testi keşfedildi; 107 geçti, yalnız gerçek Windows gerektiren 3 test atlandı. 25 JavaScript testi geçti.** Bu sonuç Windows işletim sistemi socket testinin geçtiği anlamına gelmez. Yeni Windows testleri GitHub Actions Windows runner'da çalışacak; sonucu ayrıca izlenir.
+23 Kasım 2026, Linux geliştirme ortamı: **110 Python testi keşfedildi; 107 geçti, yalnız gerçek Windows gerektiren 3 test atlandı. 25 JavaScript testi geçti.** Tam yerel koşum `3595bed21e34beb5119561c2ed2466d09be08bd3` koduna aittir. Bu Linux sonucu Windows işletim sistemi socket testi kanıtı değildir; Windows sonucu aşağıda ayrı kaydedilir.
+
+### GitHub Actions: gerçek Windows ve Linux koşumu
+
+Kod commit'i: [`574cdc462a10ad5bcc87afd6735aa21b504f5956`](https://github.com/MchtMzffr/JarvisVoice/commit/574cdc462a10ad5bcc87afd6735aa21b504f5956). [Koşum 45194537357](https://github.com/MchtMzffr/JarvisVoice/actions/runs/45194537357) başarıyla tamamlandı. Python 3.11 ve Node 24 kullanıldı; modeller veya ağır uygulama bağımlılıkları indirilmedi.
+
+| Kontrol | Windows runner | Linux runner |
+|---|---|---|
+| Güncelleyici (`test_update*.py`) | 28 geçti, atlanan yok | 25 geçti, 3 native Windows testi atlandı |
+| Profil (`test_profile.py`) | 10 geçti | 10 geçti |
+| JavaScript | 25 geçti | 25 geçti |
+| Python sözdizimi (`compileall`) | Başarılı | Başarılı |
+
+Windows'taki üç gerçek socket testi boş port, loopback listener ve wildcard listener durumlarını geçici portlarla doğruladı. Bu CI koşumu kullanıcının bilgisayarındaki 8765 portunu, Windows dosya seçicisini, mikrofon/hoparlörü, gerçek ses modellerini veya canlı Ollama/web akışını test etmez.
+
+İlk CI koşumunda (`3595bed`, [45194138242](https://github.com/MchtMzffr/JarvisVoice/actions/runs/45194138242)) native Windows port testleri geçti, ancak geri alma testinin yapay yazma hatası tetiklenmedi. `tests/test_update.py::UpdateTests.setUp` geçici kökü `.resolve()` ile kanonikleştirecek şekilde düzeltildi; üretim kodu ve geri alma beklentileri değiştirilmedi. Sonraki koşum geçti. Yol temsili farkı bulgularla tutarlıdır; özel nedenin Windows 8.3 kısa yol olduğu ayrı ölçülmedi.
 
 Yeni port testleri boş/kullanımda/bilinmiyor ayrımını, socket kapanmasını, hata kodlarının görünürlüğünü, özel hata metninin gizlenmesini ve ilk/ikinci kontrol başarısızlığında dosya yazılmamasını doğrular. Native Windows testleri kullanıcıdaki 8765 yerine geçici portlar kullanır. Detay: [PORT_CHECK_FIX.md](PORT_CHECK_FIX.md).
 

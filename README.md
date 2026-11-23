@@ -20,7 +20,7 @@ Yeni kaynak kopyası için:
 git clone https://github.com/MchtMzffr/JarvisVoice.git JarvisVoice-Kaynak
 ```
 
-Sonraki kaynak güncellemelerinde, bu klon klasöründe `git pull --ff-only` kullanılır. Mevcut çalışan kurulum ayrı klasördeyse klondaki `GUNCELLE.cmd` ile ona uygulanır. Git kullanmadan GitHub'da **Code → Download ZIP** ile aynı kaynak alınabilir. Çalışan kurulumdaki model/veri klasörlerini kaynak deposuna kopyalamak gerekmez.
+Sonraki kaynak güncellemelerinde, bu klon klasöründe `git pull --ff-only` kullanılır. Bu klondan Jarvis çalıştırıyorsan `git pull` öncesinde terminalini **Ctrl+C** ile kapat. Mevcut çalışan kurulum ayrı klasördeyse klondaki `GUNCELLE.cmd` ile ona uygulanır. Git kullanmadan GitHub'da **Code → Download ZIP** ile aynı kaynak alınabilir. Çalışan kurulumdaki model/veri klasörlerini kaynak deposuna kopyalamak gerekmez.
 
 ## 0.2.1: Windows port kontrolü düzeltmesi
 
