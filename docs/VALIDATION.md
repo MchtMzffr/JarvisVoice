@@ -19,7 +19,24 @@ Yeni kontroller şunları kapsar:
 
 ## Gerçek Windows pencere kontrolü
 
-Bu çalışma kopyası için GitHub Actions koşumu yayımdan sonra bu bölüme kaydedilecektir. `tests/desktop_smoke.py`, modeller indirilmeden `run_desktop(demo=True)` ile gerçek WebView2 penceresini açar. Amaç: yerel sayfa/kimlik doğrulamalı WebSocket, görünür chat kutusu, sessiz demo yanıtı ve listener kapanışını doğrulamak. İstenen PNG, native WebView2 CapturePreview ile gerçekten render edilen görünümden alınır. Demo cevabı gerçek GPT-OSS cevabı değildir.
+**Başarılı koşum: [45206594006](https://github.com/MchtMzffr/JarvisVoice/actions/runs/45206594006), kod commit'i [`4b8fc84`](https://github.com/MchtMzffr/JarvisVoice/commit/4b8fc8468bcf33cd58aade889fadd6ba73c22747).** Python 3.11 ve Node 24 ile Windows/Linux kontrolleri geçti.
+
+| Kontrol | Windows | Linux |
+|---|---|---|
+| Python | 181 keşfedildi; **180 geçti, 1 atlandı** | 181 keşfedildi; **177 geçti, 4 atlandı** |
+| JavaScript | **31 geçti**, atlanan yok | **31 geçti**, atlanan yok |
+| Sözdizimi / sabit hafif paket kurulumu | Başarılı | Başarılı |
+| Gerçek WebView2 pencere ve metin turu | **21 kontrol geçti** | Windows'a özel |
+
+Her iki CI ortamında tokenizer ağırlığı/önbelleği indirilmediğinden gerçek token bütçesi testi atlandı; yerel hazır önbellekle bu test geçti. Linux ayrıca 3 gerçek Windows socket testini atlar. Windows'ta bu 3 socket testi geçti; başka Python testi atlanmadı.
+
+`tests/desktop_smoke.py`, modeller indirilmeden `run_desktop(demo=True)` ile gerçek WebView2 penceresini açtı. Görünür sohbet kutusu, model başlığı, açılış tokenının URL'den kaldırılması, güvenli bağlam, ses API'lerinin bulunması, mikrofonun kapalı kalması ve WebSocket üzerinden sessiz demo yanıtı doğrulandı. Aynı Windows TCP tablosu başlangıçta bu sürecin dinleyicisini gördü; kapanışta aynı socket kapalı, sunucu tamamlanmış, thread durmuş, Uvicorn dinlemiyor ve portta IPv4 LISTEN kaydı yoktu. API dönüşleri başlangıçta ve kapanışta `[122, 0]` oldu (boyut isteği, başarılı veri çağrısı). Sonuç [NATIVE_DESKTOP_CHECK.json](NATIVE_DESKTOP_CHECK.json) içinde.
+
+[Gerçek Windows görüntüsü](images/desktop-preview.png), native WebView2 CapturePreview ile alındı ve görsel olarak incelendi: model başlığı, ses kontrolleri, sohbet metni ve yazı kutusu görünür. Bu görüntü demo modudur; örnek yanıt GPT-OSS tarafından üretilmedi. Mikrofon açılmadı; ses modeli/GPU veya kullanıcı kurulum diyalogu bu testin kapsamında değildir.
+
+İlk 0.3.0 CI koşumu [`45204639213`](https://github.com/MchtMzffr/JarvisVoice/actions/runs/45204639213), `9d1acdc` üzerinde Linux ve Windows Python/JavaScript kontrollerini geçti. Native Windows testinde görünür sohbet kutusu, güvenli bağlam, WebAudio API'leri, WebSocket üzerinden sessiz demo cevabı, gerçek PNG yakalama ve sunucu iş parçacığı kapanışı doğrulandı. Ancak 200 ms TCP probe bağlantı reddi sonucunu alamadığı için `listener_released=false` kaldı ve test **başarısız** sayıldı. Bu koşum tüm masaüstü yaşam döngüsü için başarı kanıtı değildir. `592c973` yalnız test probe'unu deneme başına 2 saniye ve en fazla 4 denemeyle sınırlar; sayısal kod/süreyi raporlar ve hâlâ gerçek bağlantı reddi arar. Ürün kapanış kodu ve başarı koşulu gevşetilmedi.
+
+İkinci koşum [`45205379584`](https://github.com/MchtMzffr/JarvisVoice/actions/runs/45205379584), `592c973` üzerinde aynı GUI/sohbet kontrollerini geçti; dört TCP yoklamasının her biri 2000 ms sonunda `10035` (WSAEWOULDBLOCK) verdi. Gerçek bağlantı reddi gözlenmediği için test yine **başarısız** sayıldı. Zaman aşımı kapalı port kanıtı olarak kabul edilmedi. Sonraki kontrol doğrudan sahip olunan socket/server durumunu ve Windows TCP LISTEN tablosunu kullanır; aynı tablo sorgusu pencere açıkken listener'ı bulmak zorundadır.
 
 Yerel Chromium denemesi sayfa açılmadan `socket() failed: Operation not permitted` ile engellendi. Sandbox gevşetilmedi; bu denemeden görsel test veya ekran görüntüsü kanıtı üretilmedi.
 

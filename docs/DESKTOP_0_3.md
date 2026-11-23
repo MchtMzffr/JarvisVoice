@@ -62,4 +62,4 @@ Normal `BASLAT.cmd`, kurulumu doğrulayıp mevcut Ollama servisini gerektiğinde
 
 ## Doğrulama sınırı
 
-Mock transport/model testleri gerçek GPT-OSS çıktısı veya plan kalitesi ölçümü değildir. Fake Popen testleri gerçek uygulama penceresinin açıldığını göstermez. Native WebView2 testi varsa ayrı raporlanır; fiziksel mikrofon, kullanıcı cihazındaki gecikme ve yeni masaüstü penceresinde tam ses/LLM akışı kullanıcı kabulü gerektirir. Son durum [VALIDATION.md](VALIDATION.md).
+Mock transport/model testleri gerçek GPT-OSS çıktısı veya plan kalitesi ölçümü değildir. Fake Popen testleri gerçek uygulama penceresinin açıldığını göstermez. Gerçek Windows WebView2 demo kontrolü geçti; [21 kontrol ve koşum kaydı](NATIVE_DESKTOP_CHECK.json) ayrı tutulur. Fiziksel mikrofon, kullanıcı cihazındaki gecikme ve yeni masaüstü penceresinde tam ses/LLM akışı kullanıcı kabulü gerektirir. Son durum [VALIDATION.md](VALIDATION.md).

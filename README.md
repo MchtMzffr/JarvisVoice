@@ -4,9 +4,13 @@
 
 JarvisVoice, Windows üzerinde çalışan yerel bir masaüstü yardımcısıdır. Kendi penceresi, sohbet kutusu, mikrofonu ve Türkçe sesi vardır. Yanıtları bu bilgisayardaki **Ollama + gpt-oss:20b** üretir; ses için **Whisper small + EMA Lightning** kullanılır.
 
-[**Windows kaynak paketini indir**](https://github.com/MchtMzffr/JarvisVoice/archive/refs/heads/main.zip) · [Kurulum](#ilk-kurulum) · [Doğrulama](docs/VALIDATION.md) · [Gelişim sırası](docs/ROADMAP.md)
+[**0.3.0 Windows paketini indir**](https://github.com/MchtMzffr/JarvisVoice/releases/download/v0.3.0/JarvisVoice-0.3.0-Windows.zip) · [Sürüm notları](https://github.com/MchtMzffr/JarvisVoice/releases/tag/v0.3.0) · [Güncel kaynak ZIP](https://github.com/MchtMzffr/JarvisVoice/archive/refs/heads/main.zip) · [Kurulum](#ilk-kurulum) · [Doğrulama](docs/VALIDATION.md) · [Gelişim sırası](docs/ROADMAP.md)
 
 > Deneysel 0.x sürümü. Windows masaüstü kabuğu, sohbet, plan ve uygulama komutları aynı projede bulunur. Yapılan testler ve henüz kullanıcı donanımında doğrulanmayan yollar [doğrulama kaydında](docs/VALIDATION.md) ayrılır.
+
+![JarvisVoice Windows masaüstü sohbet görünümü](docs/images/desktop-preview.png)
+
+*Gerçek Windows WebView2 penceresinden alınmıştır. CI demo modu gösterilir; ekrandaki örnek yanıt GPT-OSS tarafından üretilmemiştir.*
 
 ## Neler yapar?
 

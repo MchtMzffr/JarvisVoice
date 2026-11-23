@@ -1,6 +1,6 @@
 # Değişiklik geçmişi
 
-## 0.3.0 — 23 Kasım 2026 — geliştirme/doğrulama
+## 0.3.0 — 23 Kasım 2026 — Windows masaüstü önizlemesi
 
 ### Eklendi
 
@@ -20,7 +20,7 @@
 
 ### Doğrulama durumu
 
-0.3.0 native Windows/WebView2 CI ve kullanıcı masaüstü kabulü **henüz bekleniyor**. Güncel test sayıları ve ortamlar `docs/VALIDATION.md` içinde tutulur. Birim/sahte süreç testleri fiziksel ses, açılmış uygulama penceresi, gerçek GPT-OSS plan kalitesi veya performans artışı kanıtı değildir. Kullanıcının önceki sürümdeki olumlu konuşma/kalibrasyon geri bildirimi bu yeni sürümün kabulü yerine geçmez.
+0.3.0 [Windows/Linux CI ve native WebView2 kontrolü](https://github.com/MchtMzffr/JarvisVoice/actions/runs/45206594006) **geçti**: Windows Python 180 geçti/1 atlandı, Linux 177 geçti/4 atlandı; iki platformda 31 JavaScript geçti. Gerçek Windows penceresinde 21 demo sohbet/kapanış kontrolü geçti. Kullanıcının fiziksel ses ve canlı model kabulü **bekleniyor**. Güncel test sayıları ve ortamlar `docs/VALIDATION.md` içinde tutulur. Birim/sahte süreç testleri fiziksel ses, açılmış uygulama penceresi, gerçek GPT-OSS plan kalitesi veya performans artışı kanıtı değildir. Kullanıcının önceki sürümdeki olumlu konuşma/kalibrasyon geri bildirimi bu yeni sürümün kabulü yerine geçmez.
 
 0.1.0/0.2.0/0.2.1/0.3.0 kurulumları için kod geçişi tanımlıdır; ayrıntılı sınırlar `docs/COMPATIBILITY.md` ve `docs/DESKTOP_0_3.md` içindedir.
 

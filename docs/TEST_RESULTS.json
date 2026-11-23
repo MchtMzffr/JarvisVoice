@@ -1,7 +1,7 @@
 {
   "version": "0.3.0",
   "date": "2026-11-23",
-  "environment": "Linux development environment; native Windows CI pending",
+  "environment": "Linux local development; real GitHub Windows and Linux runners",
   "python": {
     "discovered": 181,
     "passed": 178,
@@ -17,8 +17,49 @@
     "skipped": 0,
     "command": "node --test tests/test_frontend.js tests/test_resampler.js"
   },
-  "ci": null,
-  "native_windows_desktop_tested": false,
+  "ci": {
+    "tested_commit": "4b8fc8468bcf33cd58aade889fadd6ba73c22747",
+    "run_id": 45206594006,
+    "url": "https://github.com/MchtMzffr/JarvisVoice/actions/runs/45206594006",
+    "conclusion": "success",
+    "python_version": "3.11",
+    "node_version": "24",
+    "windows": {
+      "python": {
+        "discovered": 181,
+        "passed": 180,
+        "failed": 0,
+        "skipped": 1,
+        "skip_reason": "Tokenizer cache not downloaded in CI",
+        "native_socket_tests_included": 3
+      },
+      "javascript": {
+        "passed": 31,
+        "failed": 0,
+        "skipped": 0
+      },
+      "compileall": "passed",
+      "native_desktop": "passed",
+      "native_desktop_checks": 21
+    },
+    "linux": {
+      "python": {
+        "discovered": 181,
+        "passed": 177,
+        "failed": 0,
+        "skipped": 4,
+        "skip_reason": "Tokenizer cache absent and three native Windows socket tests"
+      },
+      "javascript": {
+        "passed": 31,
+        "failed": 0,
+        "skipped": 0
+      },
+      "compileall": "passed"
+    },
+    "scope": "Contract/runtime tests and actual Windows WebView2 demo text roundtrip, capture and owned listener lifecycle; no physical microphone, heavy voice model, live Ollama or installer dialog."
+  },
+  "native_windows_desktop_tested": true,
   "physical_microphone_in_0_3_tested": false,
   "live_gpt_oss_in_0_3_tested": false,
   "voice_adapters_changed": false,
@@ -93,5 +134,25 @@
       },
       "scope": "Model-free updater, profile, frontend, resampling and syntax checks; no physical microphone, installer dialog, live Ollama or voice-model integration."
     }
-  }
+  },
+  "desktop_ci_attempts": [
+    {
+      "commit": "9d1acdc31a5b8c55df2ee35a10f03b518dcf48ec",
+      "run_id": 45204639213,
+      "conclusion": "failure",
+      "reason": "TCP shutdown probe inconclusive; GUI/chat/capture/thread checks passed"
+    },
+    {
+      "commit": "592c97307a7f8f87e45c2b692c537bd75d1b63ba",
+      "run_id": 45205379584,
+      "conclusion": "failure",
+      "reason": "All four two-second probes returned 10035; unknown port state rejected"
+    },
+    {
+      "commit": "4b8fc8468bcf33cd58aade889fadd6ba73c22747",
+      "run_id": 45206594006,
+      "conclusion": "success",
+      "reason": "Positive startup and negative shutdown OS LISTEN table, owned socket/server/thread checks passed"
+    }
+  ]
 }

@@ -1,0 +1,44 @@
+{
+  "checks": {
+    "assistant_demo": true,
+    "audio_worklet_available": true,
+    "chat_ready": true,
+    "chat_visible": true,
+    "listener_released": true,
+    "media_api_available": true,
+    "microphone_closed": true,
+    "model_header": true,
+    "os_listener_absent_after_close": true,
+    "os_listener_seen_before_close": true,
+    "owned_listener_closed": true,
+    "owned_listener_open_before_close": true,
+    "owned_server_finished": true,
+    "screenshot_captured": true,
+    "secure_context": true,
+    "server_thread_stopped": true,
+    "speech_muted": true,
+    "token_fragment_removed": true,
+    "user_turn": true,
+    "uvicorn_listening_before_close": true,
+    "uvicorn_servers_stopped": true
+  },
+  "demo_only": true,
+  "stage": "complete",
+  "status": "passed",
+  "tcp_table_shutdown_rcs": [
+    122,
+    0
+  ],
+  "tcp_table_startup_rcs": [
+    122,
+    0
+  ],
+  "version": "0.3.0",
+  "date": "2026-11-23",
+  "tested_commit": "4b8fc8468bcf33cd58aade889fadd6ba73c22747",
+  "run_id": 45206594006,
+  "run_url": "https://github.com/MchtMzffr/JarvisVoice/actions/runs/45206594006",
+  "screenshot_sha256": "632cdc735087b9bf5a1cf60dee03b582fb1507630d6065ac87e8b7477bf7945f",
+  "physical_microphone_opened": false,
+  "live_model_called": false
+}

@@ -2,14 +2,14 @@
 
 Bu liste geliştirme sırasını ve kabul kanıtlarını tanımlar; tarih veya başarı taahhüdü değildir. Güncel sonuç [PROJECT_STATE.md](PROJECT_STATE.md), ayrıntılı doğrulama [VALIDATION.md](VALIDATION.md) içindedir.
 
-## 1. 0.3.0 birleşik masaüstü — kod hazır, doğrulama/kullanıcı kabulü sürüyor
+## 1. 0.3.0 birleşik masaüstü — kod ve CI hazır, kullanıcı kabulü bekleniyor
 
 - `desktop.py` ve `__main__.py`: Windows WebView2 penceresi, loopback sunucu ömrü, kapanış, gezinme ve popup sınırları.
 - `static/*` ve `server.py`: aynı pencerede yazılı/sesli sohbet, seslendirme tercihi, profil/kalibrasyon ve plan kartları. Normal metin yanıtı tamamlanmadan geçmişe yazılmaz; rehberli yönergeler sesli kalır.
 - `setup_local.py`, `KUR.cmd`, `BASLAT.cmd`: açık ilk kurulum eksik bileşenleri tamamlar; günlük başlatma mevcut kurulumu kullanır. Beğenilen EMA sesi ve mevcut GPT-OSS modeli korunur.
 - `update_jarvis.py`, `GUNCELLE.cmd`: eski kurulumun verilerini ve model konumlarını koruyan kod aktarımı, ardından kilitli masaüstü paketlerinin kurulumu. İki aşamanın hata/geri alma kapsamı ayrı gösterilir.
 
-**Kabul:** Windows ve Linux otomatik sonuçları, gerçek Windows WebView2 pencere kontrolü ve kullanıcının fiziksel ses/LLM kabulü ayrı kaydedilir. Native Windows 0.3.0 sonucu henüz bekleniyor; birim testleri bunun yerine geçirilmez.
+**Kabul:** Windows ve Linux otomatik sonuçları, gerçek Windows WebView2 pencere kontrolü ve kullanıcının fiziksel ses/LLM kabulü ayrı kaydedilir. [Native Windows koşumu](https://github.com/MchtMzffr/JarvisVoice/actions/runs/45206594006) geçti; demo pencere/sohbet/kapanış sonucudur. Fiziksel ses ve canlı model kullanıcı kabulü beklenir.
 
 ## 2. Kişisel bağlam, seçili uygulamalar ve plan — ilk sürüm eklendi
 

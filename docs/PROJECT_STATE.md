@@ -13,10 +13,10 @@ GitHub: [MchtMzffr/JarvisVoice](https://github.com/MchtMzffr/JarvisVoice). Ana d
 | Konu | Kanıt / durum |
 |---|---|
 | Kullanıcıdaki önceki kurulum | İlk Windows kurulumu başarılıydı; kullanıcı EMA sesini beğendi. Son geri bildirimde kalibrasyonun olmuş gibi göründüğünü ve konuşmaların güzel olduğunu belirtti. Bu, 0.3.0 masaüstü kabulü değildir. |
-| Aktif kaynak sürümü | 0.3.0 / protokol 3 geliştirme ve doğrulama aşamasında. Yayın commit'i ve yeni CI sonucu tamamlandığında bu kayıt güncellenir. |
+| Aktif kaynak sürümü | 0.3.0 / protokol 3. Ürün kodu ve native test `4b8fc84` üzerinde doğrulandı; [CI](https://github.com/MchtMzffr/JarvisVoice/actions/runs/45206594006). |
 | Yeni arayüz | `BASLAT.cmd` → pywebview 6.2.1 / WebView2 penceresi; aynı pencerede yazılı/sesli sohbet ve plan kartları. |
 | Yerel doğrulama | Yeni eylem, plan, metin modu, kurulum ve masaüstü regresyonları eklendi. Son test sayıları ve ortam ayrımı `VALIDATION.md` içinde tutulur. |
-| Native Windows 0.3.0 CI | **Bekleniyor.** Gerçek WebView2 penceresi ve yeni Windows akışı için başarı iddiası henüz yok. |
+| Native Windows 0.3.0 CI | **Geçti.** [Koşum 45206594006](https://github.com/MchtMzffr/JarvisVoice/actions/runs/45206594006); gerçek pencere, sessiz demo sohbeti, PNG ve OS listener kapanışı. Fiziksel mikrofon/canlı model kapsam dışı. |
 | Kullanıcı Windows 0.3.0 kabulü | **Bekleniyor.** Yeni masaüstü sürümü kullanıcı tarafından henüz denenmedi. |
 
 Sürümün yetkili kod değeri `jarvis/__init__.py::__version__`, protokolün yetkili değeri `jarvis/config.py::Settings.protocol_version` içindedir.
@@ -52,12 +52,15 @@ Ham ses ve normal sohbet geçmişi kalıcı kaydedilmez. Plan/ölçüm nesnesi w
 
 Protokol 2 frontend ile protokol 3 backend birlikte çalıştırılmaz; uygulama/statik dosyalar birlikte güncellenir. Mevcut profil/kalibrasyon/hatıra şemaları değişmez. Ayrıntı: [COMPATIBILITY.md](COMPATIBILITY.md).
 
+## Dağıtım
+
+[0.3.0 Windows kaynak paketi ve sürüm notları](https://github.com/MchtMzffr/JarvisVoice/releases/tag/v0.3.0). Release iş akışı, exact commit üzerinde Windows/Linux kontrolleri geçtikten sonra git archive ZIP ve SHA256SUMS.txt yayımlar. Model ağırlıkları pakete gömülmez.
+
 ## Bir sonraki somut işler
 
-1. 0.3.0 Windows/Linux otomatik koşumlarını tamamla; native WebView2 sonucu, atlanan testler ve kod commit'ini ayrı kaydet.
-2. Kullanıcı Windows'ta güncelleme → masaüstü açılış → yazılı/sesli yanıt → tanışma/mikrofon akışını denesin; model/ses tercihi aynı kalsın.
-3. Uygulama izni kapalı/açık durumunu, izinli bir uygulamayı açmayı ve plan oluştur → göster → açıkça kaydet → yeniden aç akışını kullanıcı bilgisayarında doğrula.
-4. Ancak bu kabulün ardından aynı sistemde sıcak/soğuk model, internet ve analiz koşullarını ayırarak gecikme ölçümü al. Yeni sürüm için performans artışı henüz gösterilmedi.
+1. Kullanıcı Windows'ta güncelleme → masaüstü açılış → yazılı/sesli yanıt → tanışma/mikrofon akışını denesin; model/ses tercihi aynı kalsın.
+2. Uygulama izni kapalı/açık durumunu, izinli bir uygulamayı açmayı ve plan oluştur → göster → açıkça kaydet → yeniden aç akışını kullanıcı bilgisayarında doğrula.
+3. Ancak bu kabulün ardından aynı sistemde sıcak/soğuk model, internet ve analiz koşullarını ayırarak gecikme ölçümü al. Yeni sürüm için performans artışı henüz gösterilmedi.
 
 ## Tarihsel doğrulama
 
