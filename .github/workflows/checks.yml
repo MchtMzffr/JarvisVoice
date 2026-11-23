@@ -1,4 +1,4 @@
-name: Model-free checks
+name: Application checks and Windows desktop
 
 on:
   push:
@@ -12,7 +12,7 @@ jobs:
   checks:
     name: Python and JavaScript (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -32,11 +32,60 @@ jobs:
         with:
           node-version: "24"
           package-manager-cache: false
-      - name: Updater and native port checks
-        run: python -m unittest discover -s tests -p "test_update*.py" -v
-      - name: Profile and onboarding checks
-        run: python -m unittest discover -s tests -p "test_profile.py" -v
+      - name: Install pinned model-free dependencies
+        run: python tests/install_check_dependencies.py
+      - name: Python contracts and runtime checks
+        run: python -m unittest discover -s tests -v
       - name: Frontend and resampling checks
         run: node --test tests/test_frontend.js tests/test_resampler.js
       - name: Python syntax check
         run: python -m compileall -q jarvis update_jarvis.py
+      - name: Check Windows WebView2 runtime
+        if: runner.os == 'Windows'
+        run: python -c "from jarvis.setup_local import webview2_available, install_package; install_package('Microsoft.EdgeWebView2Runtime') if not webview2_available() else None; assert webview2_available(), 'WebView2 runtime missing'"
+      - name: Native Windows desktop and text conversation
+        if: runner.os == 'Windows'
+        env:
+          JARVIS_DESKTOP_SMOKE_SCREENSHOT: desktop-preview.png
+          JARVIS_DESKTOP_SMOKE_REPORT: desktop-smoke.json
+        run: python tests/desktop_smoke.py
+      - name: Save the rendered Windows preview
+        if: always() && runner.os == 'Windows'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: windows-desktop-preview
+          path: |
+            desktop-preview.png
+            desktop-smoke.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  release:
+    name: Publish the verified Windows source package
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'release:')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Read the reviewed package version
+        shell: python
+        run: |
+          import os, pathlib, re, tomllib
+          version = tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version']
+          assert re.fullmatch(r'0\.\d+\.\d+', version), 'Unexpected release version'
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as stream:
+              stream.write(f'RELEASE_VERSION={version}\n')
+      - name: Package and publish the exact checked commit
+        shell: bash
+        run: |
+          git archive --format=zip --prefix=JarvisVoice/ -o "JarvisVoice-${RELEASE_VERSION}-Windows.zip" "$GITHUB_SHA"
+          sha256sum "JarvisVoice-${RELEASE_VERSION}-Windows.zip" > SHA256SUMS.txt
+          gh release create "v${RELEASE_VERSION}" "JarvisVoice-${RELEASE_VERSION}-Windows.zip" SHA256SUMS.txt --target "$GITHUB_SHA" --title "Jarvis Voice ${RELEASE_VERSION} — Windows masaüstü önizlemesi" --notes-file docs/RELEASE_NOTES.md --prerelease

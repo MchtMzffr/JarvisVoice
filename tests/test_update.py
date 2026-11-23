@@ -128,7 +128,7 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(json.loads(manifests[0].read_text(encoding="utf-8"))["status"], "rolled_back")
 
     def test_unknown_target_version_is_rejected(self):
-        (self.target / "jarvis" / "__init__.py").write_text('__version__ = "0.3.0"\n', encoding="utf-8")
+        (self.target / "jarvis" / "__init__.py").write_text('__version__ = "9.9.9"\n', encoding="utf-8")
         before = self.snapshot()
         with self.assertRaisesRegex(updater.UpdateError, "0.1.0/0.2.0"):
             self.run_update()
@@ -139,6 +139,26 @@ class UpdateTests(unittest.TestCase):
         file.write_text(file.read_text().replace("httpx==0.28.1", "httpx==9.0.0"))
         before = self.snapshot()
         with self.assertRaisesRegex(updater.UpdateError, "Bağımlılıklar farklı"):
+            self.run_update()
+        self.assertEqual(self.snapshot(), before)
+
+    def test_approved_desktop_extra_is_copied_without_touching_python_environment(self):
+        file = self.source / "pyproject.toml"
+        extra = '''\n[project.optional-dependencies]\ndesktop = ["pywebview==6.2.1 ; sys_platform == 'win32'", "pythonnet==3.2.1 ; sys_platform == 'win32'"]\n'''
+        file.write_text(file.read_text(encoding="utf-8") + extra, encoding="utf-8")
+        before = self.snapshot()
+        self.run_update()
+        after = self.snapshot()
+        self.assertIn(b"pywebview==6.2.1", after["pyproject.toml"])
+        for name in before:
+            if name.startswith((".venv/", ".runtime/", "data/")):
+                self.assertEqual(before[name], after[name])
+
+    def test_unapproved_optional_dependency_is_rejected_without_writes(self):
+        file = self.source / "pyproject.toml"
+        file.write_text(file.read_text(encoding="utf-8") + '\n[project.optional-dependencies]\nunknown = ["unreviewed-package==1.0"]\n', encoding="utf-8")
+        before = self.snapshot()
+        with self.assertRaisesRegex(updater.UpdateError, "İsteğe bağlı paketler"):
             self.run_update()
         self.assertEqual(self.snapshot(), before)
 

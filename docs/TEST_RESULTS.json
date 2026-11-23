@@ -1,70 +1,97 @@
 {
-  "version": "0.2.1",
+  "version": "0.3.0",
   "date": "2026-11-23",
-  "environment": "Linux test environment",
+  "environment": "Linux development environment; native Windows CI pending",
   "python": {
-    "discovered": 110,
-    "passed": 107,
+    "discovered": 181,
+    "passed": 178,
     "failed": 0,
     "skipped": 3,
     "skip_reason": "Native Windows socket tests on Linux",
-    "command": "python -m unittest discover -s tests -q"
+    "command": "python -m unittest discover -s tests -q",
+    "tokenizer_cache_present": true
   },
   "javascript": {
-    "passed": 25,
+    "passed": 31,
     "failed": 0,
     "skipped": 0,
     "command": "node --test tests/test_frontend.js tests/test_resampler.js"
   },
-  "windows_0_2_end_to_end_tested": false,
+  "ci": null,
+  "native_windows_desktop_tested": false,
+  "physical_microphone_in_0_3_tested": false,
+  "live_gpt_oss_in_0_3_tested": false,
+  "voice_adapters_changed": false,
   "emotion_classifier_included": false,
   "clinical_validation_performed": false,
-  "native_windows_ci": "passed",
-  "local_tested_commit": "3595bed21e34beb5119561c2ed2466d09be08bd3",
-  "ci": {
-    "tested_commit": "574cdc462a10ad5bcc87afd6735aa21b504f5956",
-    "run_id": 45194537357,
-    "url": "https://github.com/MchtMzffr/JarvisVoice/actions/runs/45194537357",
-    "conclusion": "success",
-    "python_version": "3.11",
-    "node_version": "24",
-    "windows": {
-      "updater": {
-        "passed": 28,
-        "failed": 0,
-        "skipped": 0,
-        "native_socket_tests_included": 3
-      },
-      "profile": {
-        "passed": 10,
-        "failed": 0,
-        "skipped": 0
-      },
-      "javascript": {
-        "passed": 25,
-        "failed": 0,
-        "skipped": 0
-      },
-      "compileall": "passed"
+  "previous_0_2_1": {
+    "version": "0.2.1",
+    "date": "2026-11-23",
+    "environment": "Linux test environment",
+    "python": {
+      "discovered": 110,
+      "passed": 107,
+      "failed": 0,
+      "skipped": 3,
+      "skip_reason": "Native Windows socket tests on Linux",
+      "command": "python -m unittest discover -s tests -q"
     },
-    "linux": {
-      "updater": {
-        "passed": 25,
-        "failed": 0,
-        "skipped": 3
-      },
-      "profile": {
-        "passed": 10,
-        "failed": 0,
-        "skipped": 0
-      },
-      "javascript": {
-        "passed": 25,
-        "failed": 0,
-        "skipped": 0
-      },
-      "compileall": "passed"
+    "javascript": {
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "command": "node --test tests/test_frontend.js tests/test_resampler.js"
     },
-    "scope": "Model-free updater, profile, frontend, resampling and syntax checks; no physical microphone, installer dialog, live Ollama or voice-model integration."
+    "windows_0_2_end_to_end_tested": false,
+    "emotion_classifier_included": false,
+    "clinical_validation_performed": false,
+    "native_windows_ci": "passed",
+    "local_tested_commit": "3595bed21e34beb5119561c2ed2466d09be08bd3",
+    "ci": {
+      "tested_commit": "574cdc462a10ad5bcc87afd6735aa21b504f5956",
+      "run_id": 45194537357,
+      "url": "https://github.com/MchtMzffr/JarvisVoice/actions/runs/45194537357",
+      "conclusion": "success",
+      "python_version": "3.11",
+      "node_version": "24",
+      "windows": {
+        "updater": {
+          "passed": 28,
+          "failed": 0,
+          "skipped": 0,
+          "native_socket_tests_included": 3
+        },
+        "profile": {
+          "passed": 10,
+          "failed": 0,
+          "skipped": 0
+        },
+        "javascript": {
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0
+        },
+        "compileall": "passed"
+      },
+      "linux": {
+        "updater": {
+          "passed": 25,
+          "failed": 0,
+          "skipped": 3
+        },
+        "profile": {
+          "passed": 10,
+          "failed": 0,
+          "skipped": 0
+        },
+        "javascript": {
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0
+        },
+        "compileall": "passed"
+      },
+      "scope": "Model-free updater, profile, frontend, resampling and syntax checks; no physical microphone, installer dialog, live Ollama or voice-model integration."
+    }
   }
 }

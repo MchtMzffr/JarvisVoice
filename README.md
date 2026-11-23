@@ -1,53 +1,79 @@
-# JarvisVoice — 0.2.1
+# JarvisVoice — 0.3.0
 
-Windows'taki mevcut **Ollama + gpt-oss:20b** kurulumuyla çalışan Türkçe sesli sohbet uygulaması. Beğendiğin **EMA Lightning sesi korunuyor**. Bu sürüm sesli tanışma, mikrofon kontrolü, tercihlerin kalıcı kaydı, süre ölçümleri ve isteğe bağlı yerel akustik inceleme ekler.
+**Türkçe konuş, aynı pencerede yazış, kişisel notlarını hatırlat ve bir sonraki adımını planla.**
 
-**Duygu veya hastalık sınıflandırıcısı içermez.** Sesin ölçülebilir özelliklerini çıkarır; kişinin ne hissettiğini onun anlatımından öğrenmeye çalışır. Destekleyici sohbet hedeflenir; klinik etkinlik veya terapi hizmeti doğrulanmış değildir. Teknik kanıtlar ve geliştirme sınırları: `docs/SES_ANALIZI_KANITLARI.md`.
+JarvisVoice, Windows üzerinde çalışan yerel bir masaüstü yardımcısıdır. Kendi penceresi, sohbet kutusu, mikrofonu ve Türkçe sesi vardır. Yanıtları bu bilgisayardaki **Ollama + gpt-oss:20b** üretir; ses için **Whisper small + EMA Lightning** kullanılır.
 
-## GitHub üzerinden geliştirme
+[**Windows kaynak paketini indir**](https://github.com/MchtMzffr/JarvisVoice/archive/refs/heads/main.zip) · [Kurulum](#ilk-kurulum) · [Doğrulama](docs/VALIDATION.md) · [Gelişim sırası](docs/ROADMAP.md)
 
-Depo: [MchtMzffr/JarvisVoice](https://github.com/MchtMzffr/JarvisVoice). Ana dal: `main`.
+> Deneysel 0.x sürümü. Windows masaüstü kabuğu, sohbet, plan ve uygulama komutları aynı projede bulunur. Yapılan testler ve henüz kullanıcı donanımında doğrulanmayan yollar [doğrulama kaydında](docs/VALIDATION.md) ayrılır.
 
-- [Çalışma durumu](docs/PROJECT_STATE.md): yeni bir çalışmada ilk okunacak kısa kayıt.
-- [Geliştirme rehberi](https://github.com/MchtMzffr/JarvisVoice/blob/main/AGENTS.md): sözleşmeler, parametre kaynağı ve doğrulama kuralları.
-- [Değişiklik geçmişi](https://github.com/MchtMzffr/JarvisVoice/blob/main/CHANGELOG.md): sürümlere göre değişen davranışlar.
-- [Yol haritası](docs/ROADMAP.md): sıradaki işler ve kabul ölçütleri.
-- [Otomatik kontroller](https://github.com/MchtMzffr/JarvisVoice/actions): Windows/Linux üzerinde model indirmeyen güncelleyici, profil ve JavaScript testleri. Tam ses/LLM uygulama testi değildir.
+## Neler yapar?
 
-Yeni kaynak kopyası için:
+| İhtiyaç | Davranış |
+|---|---|
+| Konuşmak veya yazışmak | Aynı sohbet kutusunda metin ve ses. **Sesli yanıt** kapatıldığında normal yanıt metin olarak gelir. |
+| Seni tanımak | İsim ve konuşma tercihleri onaylı profilden, kişisel bilgiler açıkça kaydettiğin notlardan gelir. |
+| Plan hazırlamak | Hedefinden en fazla 6 adımlı taslak üretir; **Planı kaydet** isteğinle bu bilgisayara kaydeder. |
+| Uygulama açmak | Oturum izni açıkken Hesap Makinesi, Not Defteri, Dosya Gezgini ve Paint için doğrudan komut alır. |
+| Güncel bilgi araştırmak | İsteğe bağlı internet araması ve kaynak bağlantıları; yerel sohbet için anahtar gerekmez. |
+| Mikrofonu ayarlamak | Sesli tanışma ve kısa mikrofon ölçümü; beğenilen Türkçe EMA sesi korunur. |
+
+## İlk kurulum
+
+Hedef platform **Windows x64**. Geliştirme hedefi 32 GB RAM ve 16 GB VRAM sınıfındaki bir bilgisayardır; daha düşük donanımdaki hız ayrıca ölçülmelidir. İlk kurulum internet gerektirir. Mevcut model yoksa yaklaşık **13 GB GPT-OSS**, yaklaşık **525 MB ses dosyası** ve Python/masaüstü paketleri indirilir; model, paket ve önbellekler için ek disk alanı gerekir.
+
+1. Yukarıdaki ZIP'i kalıcı bir klasöre **tümüyle çıkar** veya depoyu Git ile klonla.
+2. **KUR.cmd** dosyasını aç. Uygulamaya özel Python ve sabit paketler hazırlanır. Windows WebView2 ve Ollama eksikse `winget` üzerinden kurulur; `gpt-oss:20b` eksikse yerel Ollama'ya indirilir.
+3. Kurulum başarıyla tamamlandığında **BASLAT.cmd** dosyasını aç.
+4. **JarvisVoice'un kendi masaüstü penceresi** açılır. Sohbet kutusuna yaz veya **Konuşmaya başla** düğmesine bas.
+
+Mevcut Ollama/model kurulumu yeniden indirilmez. Kurulum `winget` bulamazsa resmî Ollama/WebView2 bağlantılarını gösterip durur. İlk indirmeden sonra yerel sohbet ve ses dosyaları yerel çalışır; isteğe bağlı internet araştırması ayrı açılır. Ollama'nın kendi Chat ekranına Jarvis özelliği eklenmez: JarvisVoice, Ollama'nın [yerel API'sini](https://docs.ollama.com/api/introduction) kullanan masaüstü uygulamasıdır.
+
+## Çalışan eski kurulumu 0.3.0'a güncelleme
+
+1. Açık Jarvis penceresini ve eski Jarvis terminalini kapat.
+2. Yeni kaynağı eski kurulumdan ayrı bir klasöre al.
+3. Yeni kaynak klasöründeki **GUNCELLE.cmd** dosyasını aç; seçicide eski çalışan kurulumun **BASLAT.cmd** dosyasını seç.
+4. Kod yedeği ve aktarımı bittikten sonra güncelleyici eski klasördeki **KUR.cmd** kontrolünü çalıştırır. Bu adım yeni masaüstü paketlerini kurabilir; internet gerekir. Mevcut modeller ve kullanıcı verileri korunur.
+5. Bütün adımlar başarıyla bitince eski klasördeki **BASLAT.cmd** ile devam et.
+
+0.1.0 / 0.2.0 / 0.2.1 / 0.3.0 kurulumları desteklenir. Kod aktarımı ve Python paket kurulumu ayrı işlemlerdir: paket kurulumu başarısızsa eski klasörde **KUR.cmd** yeniden çalıştırılır. Kod güncelleyicisi paket kurulumunu geri aldığını iddia etmez. Port durumu bilinmiyorsa kod aktarımı başlamaz. [Geçiş ve geri alma sınırları](docs/COMPATIBILITY.md).
+
+### Git ile kaynak güncelleme
+
+Git kurulduktan sonra ilk kaynak kopyası:
 
 ```powershell
+cd $env:USERPROFILE
 git clone https://github.com/MchtMzffr/JarvisVoice.git JarvisVoice-Kaynak
 ```
 
-Sonraki kaynak güncellemelerinde, bu klon klasöründe `git pull --ff-only` kullanılır. Bu klondan Jarvis çalıştırıyorsan `git pull` öncesinde terminalini **Ctrl+C** ile kapat. Mevcut çalışan kurulum ayrı klasördeyse klondaki `GUNCELLE.cmd` ile ona uygulanır. Git kullanmadan GitHub'da **Code → Download ZIP** ile aynı kaynak alınabilir. Çalışan kurulumdaki model/veri klasörlerini kaynak deposuna kopyalamak gerekmez.
+**Kaynak klonu ve çalışan eski kurulum ayrı klasörlerdeyse**, sonraki güncellemelerde:
 
-## 0.2.1: Windows port kontrolü düzeltmesi
+```powershell
+cd "$env:USERPROFILE\JarvisVoice-Kaynak"
+git pull --ff-only
+if ($LASTEXITCODE -eq 0) { .\GUNCELLE.cmd }
+```
 
-0.2.0 güncelleyicisinde görülen “8765 portu kontrol edilemedi” hatası için Windows kontrol yolu değişti. TCP bağlantısının 0,5 saniyede sonuçlanmasını beklemek yerine Windows'un exclusive bind kontrolü kullanılır; ağ servisi açılmaz. Kullanımda veya sonucu bilinmeyen port güncellemeyi durdurur. Yeni hata mesajı işlem aşamasını ve sayısal OS kodlarını verir.
+**İlk kurulumu doğrudan Git klonunda yaptıysan**, Jarvis'i kapat; o klasörde `git pull --ff-only` başarılı olduktan sonra `KUR.cmd`, ardından `BASLAT.cmd` çalıştır. Güncelleyicide kaynak klasörünü hedef olarak seçme. Git ile alınmayan ZIP klasörü `git pull` kullanamaz.
 
-Eski genel mesaj gerçek Windows hata kodunu sakladığından önceki olayın kesin nedeni belirlenemedi. Düzeltme timeout bağımlılığını kaldırır; Windows kabul sonucu ayrıca izlenir. [Teknik açıklama](docs/PORT_CHECK_FIX.md).
+## Kişisel not, uygulama ve plan örnekleri
 
-## Zaten çalışan bir kurulumu güncelleme
+Sesle veya sohbet kutusuyla:
 
-1. Açık Jarvis terminalini **Ctrl+C** ile kapat. Ollama açık kalabilir.
-2. Yeni ZIP'i **eski kurulumdan ayrı, onun içine girmeyen bir klasöre** çıkar. ZIP içinden çalıştırma.
-3. **Yeni klasördeki GUNCELLE.cmd** dosyasını aç. Dosya seçicide **çalışan eski kurulum klasörünün BASLAT.cmd** dosyasını seç.
-4. Başarı mesajından sonra **eski kurulum klasöründeki BASLAT.cmd** ile devam et. Sayfa açıksa yeniden yükle.
+- **“Bunu hatırla: Hafta içi akşamları yarım saat ayırabiliyorum.”** Açık isteğinle kalıcı not olur.
+- **“Neleri hatırlıyorsun?”** Kaydettiğin notları gösterir/söyler.
+- **“Hesap makinesini aç.”** Önce Ayarlar → **Bilgisayarda uygulama açma** iznini aç. İzin her oturumda kapalı başlar.
+- **“Jarvis, not defterini açar mısın?”** Aynı izinli uygulama yönlendiricisini kullanır.
+- **“Plan oluştur: Akşamları yarım saat ayırarak Python öğrenmek istiyorum.”** Profil ve notlarla yerel modelde taslak üretir.
+- **“Planı kaydet.”** Ekrandaki taslağı bu bilgisayara kaydeder; varsa önceki kayıtlı planın yerini alır.
+- **“Planımı göster.”** Önce güncel taslağı, taslak yoksa kayıtlı planı açar/okur.
+- **“Plan taslağını iptal et.”** Kaydedilmemiş taslağı kaldırır.
+- **“Kayıtlı planımı sil.”** Kayıtlı planı siler.
 
-Güncelleyici mevcut uygulamaya özel Python'u kullanır. Bağımlılık listesi değişmediği için paketleri, GPT-OSS'u ve yaklaşık 525 MB ses dosyasını yeniden indirmez. `data`, `.venv` ve `.runtime` klasörlerini değiştirmez. Değişen eski kodu `backups` altında SHA256 bilgileriyle yedekler; normal yazma hatasında değişiklikleri geri almaya çalışır. Windows dosya seçicisinin gerçek Windows çalışması bu geliştirme ortamında sınanmadı; taşınabilir güncelleme mantığının testleri pakettedir.
-
-Bu yol tamamlanmış 0.1.0, 0.2.0 veya 0.2.1 kurulumu içindir. **Yeni boş klasörde BASLAT.cmd açmak yerine eski kurulum üzerinden devam et.** Güncelleme sonrası yeni paketin ayrı klasörü çalışma için gerekli değildir; ZIP'i yedek tutabilirsin.
-
-## İlk kez kuruyorsan
-
-1. ZIP'i kalıcı bir klasöre çıkar.
-2. Ollama'yı aç; `ollama list` içinde `gpt-oss:20b` bulunduğunu kontrol et.
-3. **KUR.cmd** dosyasını aç. Python 3.11, sabit CPU paketleri ve ses dosyaları ilk kurulumda internetten indirilir.
-4. Kurulum tamamlanınca **BASLAT.cmd** dosyasını aç.
-5. Yerel sayfada **Konuşmaya başla** düğmesine basıp mikrofon izni ver. Terminal penceresi açık kalmalı.
-
-Kurulum genel Python ortamını değiştirmez. Uygulamanın Python'u `.runtime`, paketleri `.venv`, modelleri ve onaylı kişisel ayarları `data` altında tutulur. `SES_ORNEGI.wav`, aynı EMA sesinin önceki sürümde oluşturulmuş örneğidir.
+Plan taslağı kaydedilene kadar RAM'dedir ve 10 dakika sonra geçersizleşir. Bu sürüm tek kayıtlı plan tutar; plan adımlarını otomatik yürütmez, takvime eklemez veya hatırlatıcı başlatmaz. Uygulama komutları dört sabit uygulamayla sınırlıdır; serbest PowerShell/terminal komutu, modelin ürettiği dosya yolu veya web metninden uygulama başlatılmaz. “Başlatma isteği gönderildi” işletim sistemine isteğin iletildiğini belirtir; pencerenin gerçekten görünmesini ölçmez.
 
 ## İlk konuşma: sesli tanışma
 
@@ -60,7 +86,7 @@ Kurulum genel Python ortamını değiştirmez. Uygulamanın Python'u `.runtime`,
 - Sözünü bitirmen için kısa, dengeli veya rahat bekleme süresi.
 - Kulaklık mı hoparlör mü kullandığın.
 
-Örneğin “Adım Muzaffer”, “Sana Atlas diyeyim”, “Samimi konuş”, “Kısa cevap ver” diyebilirsin. Sonunda tercihleri okuyup onay ister; **son onaydan önce profil dosyası yazılmaz**. “Tekrar”, “iptal” veya “baştan başla” diyebilirsin. Mikrofonu kapatıp aynı oturumda açınca yarım kalan adıma dönülür; sekmeyi kapatmak kaydedilmemiş taslağı siler.
+Örneğin “Adım Muzaffer”, “Sana Atlas diyeyim”, “Samimi konuş”, “Kısa cevap ver” diyebilirsin. Sonunda tercihleri okuyup onay ister; **son onaydan önce profil dosyası yazılmaz**. “Tekrar”, “iptal” veya “baştan başla” diyebilirsin. Mikrofonu kapatıp aynı oturumda açınca yarım kalan adıma dönülür; pencereyi kapatmak kaydedilmemiş taslağı siler.
 
 Yeniden değiştirmek için **“Yeniden tanışalım”** de veya **Tanışma ve sana göre ayarlar** bölümünü aç. Formdaki değişiklikler yalnız **Tercihleri kaydet** düğmesiyle uygulanır. Bu sürüm tek yerel profil kullanır; sesinden kim olduğunu tanımaz ve farklı kişileri otomatik ayırmaz.
 
@@ -101,8 +127,8 @@ Bu işlem model eğitimi, ses kimliği kaydı veya duygu kalibrasyonu değildir.
 
 - **Mikrofonu kapat:** mikrofon akışını ve o anki yanıtı durdurur.
 - **Sesi kes:** yanıtı keser; mikrofon açıksa dinleme sürer.
-- **Konuşma dökümünü göster:** transkript ve varsa gerçek arama kaynaklarını açar.
-- **Yazarak dene:** mikrofon kullanmadan aynı dil modeli ve sesi dener.
+- **Sohbet kutusu:** konuşma ve yazışma metinleri açılışta görünür; kaynaklar ayrıca gösterilir.
+- **Yazılı sohbet:** mikrofon kullanmadan aynı yerel modele ulaşır. Sesli yanıt kapalıysa normal cevapta TTS çağrılmaz; tanışma ve mikrofon yönergeleri sesli kalır.
 - **Son yanıtın süreleri:** ASR, model ilk metni, ilk ses hazırlığı ve TTS gerçek zaman oranını gösterir.
 
 Varsayılan olarak Jarvis konuşurken mikrofon aktarımı duraklar. Kulaklıkla **Konuşurken de beni dinle** seçeneğini açabilirsin. Hoparlör yankısı tarayıcı/cihaz düzenine bağlıdır. Tek konuşma yaklaşık **30 saniye** ile sınırlıdır; sınır dolarsa eksik düşünceye cevap üretmek yerine mikrofon durur. Bu sürüm kısmi metni konuşurken akıtan bir ASR kullanmaz.
@@ -119,7 +145,7 @@ Kalıcı kısa notlar yalnız doğrudan kullanıcı komutuyla kaydedilir:
 - “Neleri hatırlıyorsun?”
 - “Tüm hatıralarımı sil.”
 
-Profil `data/profile.json`, mikrofon eşiği `data/audio_calibration.json`, açıkça kaydedilmiş notlar `data/memories.sqlite3` içindedir. Bu dosyalar şifrelenmiş değildir. Son komut yalnız hatıraları siler; profil ve mikrofon ayarları ayrı tutulur. Normal sohbet, ses ve ölçümler kalıcı kayda alınmaz. Model bir ölçümü sözlü yanıtta açıklarsa o metin normal oturum geçmişinde bulunabilir. 4096 token bağlam doldukça eski turlar düşürülür; yalnız tamamen oynatılan yanıt cümleleri geçmişe işlenir.
+Profil `data/profile.json`, mikrofon eşiği `data/audio_calibration.json`, açıkça kaydedilmiş notlar `data/memories.sqlite3`, açıkça kaydedilmiş tek plan `data/plan.json` içindedir. Bu dosyalar şifrelenmiş değildir. Son komut yalnız hatıraları siler; profil ve mikrofon ayarları ayrı tutulur. Normal sohbet, ses ve ölçümler kalıcı kayda alınmaz. Model bir ölçümü sözlü yanıtta açıklarsa o metin normal oturum geçmişinde bulunabilir. 4096 token bağlam doldukça eski turlar düşürülür; sesli modda yalnız tamamen oynatılan yanıt cümleleri, sessiz yazışmada yalnız tamamlanıp gönderilen yanıt geçmişe işlenir.
 
 ## Mimari ve performans kararı
 
@@ -130,9 +156,9 @@ Profil `data/profile.json`, mikrofon eşiği `data/audio_calibration.json`, aç�
 | Türkçe ASR | Whisper small, CTranslate2 int8 / CPU |
 | Ses üretimi | Aynı EMA Lightning 1.1.2 / CPU |
 | Akustik ölçüm | NumPy, sınırlı kare analizi / ayrı CPU işi |
-| Arayüz | Yerel tarayıcı, WebAudio / 127.0.0.1:8765 |
+| Masaüstü arayüz | pywebview 6.2.1 + Microsoft WebView2; yerel WebAudio / 127.0.0.1:8765 |
 
-Ollama'nın güncel resmî belgelerinde kendi konuşma üretim API'si vardır; belgelenen Phonon modeli İngilizcedir. İncelenen belgelerde bu EMA sesini, tanışmayı ve ölçüm panelini mevcut masaüstü arayüzüne eklenti olarak takmanın desteklenen yolu bulunamadı. Bu nedenle kendi yerel arayüzümüz mevcut Ollama API'sine bağlanır. Bu uygulama Ollama'nın bir fork'u değildir. [Ollama Speech](https://docs.ollama.com/capabilities/speech).
+Masaüstü pencere `pywebview`/WebView2 ile açılır. Arayüz ve Python sunucusu aynı uygulama tarafından başlatılır; pencere kapanınca Jarvis sunucusu kapanışa alınır. Mevcut Ollama servisi ortak yerel model motorudur ve kapatılmaz. [Masaüstü tasarımı](docs/DESKTOP_0_3.md).
 
 0.2.0 mevcut modeli başlangıçta yüklemeyi dener, isteklerde `keep_alive=30m` kullanır, HTTP bağlantısını yeniden kullanır, sabit yönergelerin sesini RAM'de en fazla 24 giriş/8 MiB ile önbellekler ve isteğe bağlı ses analizini ASR ile paralel başlatır. Bunlar belirli bir Windows gecikmesi garanti etmez. Uzun `keep_alive` modelin bellekte daha uzun kalmasına yol açabilir. GPU/CPU ASR karşılaştırması ve gerçek mikrofon gecikmesi ayrıca ölçülmelidir.
 
@@ -145,13 +171,14 @@ Ses modelleri normal çalıştırmada yerel dosyalardan açılır. ONNX Runtime 
 | Durum | İşlem |
 |---|---|
 | Model/bağlantı hatası | Ollama'yı aç; `ollama list` içinde gpt-oss:20b'yi kontrol et. |
-| Eski arayüz / protokol uyuşmazlığı | Eski sekmeyi kapat; güncellenmiş BASLAT.cmd ile aç. |
-| Mikrofon reddedildi | Tarayıcı site izni ve Windows mikrofon gizlilik ayarını kontrol et. |
+| Eski arayüz / protokol uyuşmazlığı | Eski Jarvis penceresini kapat; güncellenmiş BASLAT.cmd ile aç. |
+| Mikrofon reddedildi | Jarvis/WebView2 iznini ve Windows mikrofon gizlilik ayarını kontrol et. |
 | Kendi sesine cevap veriyor | Kulaklık kullan; konuşurken dinleme seçeneğini kapat. |
 | Kelimeler yanlış | Mikrofon kontrolünü çalıştır; ASR transkriptini incele. |
 | Cümlem yarıda kesiliyor | Duraklamayı “Rahat” seç; bu toplam yanıt süresini uzatır. |
 | Profil/kalibrasyon dosyası bozuk | Hata mesajındaki dosyayı yedekleyip kaldır; uygulama varsayılana döner. |
-| 8765 portu dolu | Önceki Jarvis terminalini kapat; başka süreci otomatik sonlandırmaz. |
+| 8765 portu dolu | Önceki Jarvis penceresini/terminalini kapat; başka süreci otomatik sonlandırmaz. |
+| Masaüstü paketi / WebView2 eksik | KUR.cmd ile masaüstü bileşenlerini tamamla. |
 | DLL yüklenmiyor | [Microsoft Visual C++ x64 Runtime](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) gereksinimini kontrol et. |
 
 ### Güncelleme kurtarma
@@ -172,4 +199,10 @@ Geliştirme için JavaScript testleri (kullanıcı kurulumunda Node gerekmez):
 node --test tests/test_frontend.js tests/test_resampler.js
 ```
 
-Kullanıcının 0.1.0 Windows kurulumu başarıyla tamamlandı ve ses beğenildi. Bu yeni sürümün fiziksel Windows mikrofonu, gerçek tarayıcı oynatması, canlı Ollama birleşimi ve güncelleme dosya seçicisi burada uçtan uca çalıştırılmadı. Ses kontrolünde tek bir örnekte WER=0 veya çok sayıda geçen birim testi, genel Türkçe/duygu/klinik başarı oranı değildir.
+Kullanıcı önceki sürümde konuşmanın iyi olduğunu ve kalibrasyonun olmuş göründüğünü bildirdi; bu, yeni masaüstü sürümünün uçtan uca kabulü değildir. Yeni sürümün gerçek model/mikrofon/Windows kabul durumu docs/VALIDATION.md içinde ayrı kaydedilir. Ses kontrolünde tek bir örnekte WER=0 veya çok sayıda geçen birim testi, genel Türkçe/duygu/klinik başarı oranı değildir.
+
+## Geliştirme sürekliliği
+
+Yeni çalışmada önce [PROJECT_STATE.md](docs/PROJECT_STATE.md) okunur. [AGENTS.md](https://github.com/MchtMzffr/JarvisVoice/blob/main/AGENTS.md) geliştirme kurallarını, [CHANGELOG.md](https://github.com/MchtMzffr/JarvisVoice/blob/main/CHANGELOG.md) sürüm geçmişini tutar. Kişisel veri, modeller, sanal ortamlar ve anahtarlar kaynak deposuna alınmaz.
+
+Bu uygulama duygu/hastalık sınıflandırıcısı veya doğrulanmış terapi değildir. Mikrofon kalibrasyonu kişisel model eğitimi değildir; kişisel bilgiler açık not ve profil üzerinden kullanılır. [Ses analizi sınırları](docs/SES_ANALIZI_KANITLARI.md).

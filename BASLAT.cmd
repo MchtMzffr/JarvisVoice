@@ -9,11 +9,17 @@ set "HF_HUB_DISABLE_IMPLICIT_TOKEN=1"
 if exist ".jarvis-update.lock" goto updating
 if not exist ".venv\Scripts\python.exe" goto missing
 if not exist "data\prepared.json" goto missing
-echo Jarvis Voice aciliyor. Ollama uygulamasi acik olmali.
-echo Bu pencereyi acik birak. Kapatmak icin Ctrl+C kullan.
-".venv\Scripts\python.exe" -m jarvis
-if errorlevel 1 pause
-exit /b
+echo Jarvis Voice masaustu penceresi aciliyor.
+echo Yerel Ollama arka planda kullanilir. Jarvis penceresini kapatarak cikabilirsin.
+".venv\Scripts\python.exe" -m jarvis.setup_local
+if errorlevel 1 goto failed
+start "" /D "%~dp0" "%~dp0.venv\Scripts\pythonw.exe" -m jarvis --desktop
+if errorlevel 1 goto failed
+exit /b 0
+:failed
+echo Jarvis baslatilamadi. Yukaridaki aciklamayi kontrol et.
+pause
+exit /b 1
 :missing
 echo Once KUR.cmd dosyasini calistir.
 pause

@@ -1,10 +1,10 @@
-# PARAMETER_INDEX — 0.2.1
+# PARAMETER_INDEX — 0.3.0
 
 Ayarlanabilir çalışma parametreleri için tek yetkili tanım `jarvis/config.py::Settings`. Tablo bu tanımdan üretilmiştir; çalışma sırasında Markdown okunmaz. Format/şema sabitlerinin konumları aşağıdadır.
 
 | Parametre | Varsayılan |
 |---|---|
-| `protocol_version` | `2` |
+| `protocol_version` | `3` |
 | `host` | `127.0.0.1` |
 | `port` | `8765` |
 | `ollama_url` | `http://127.0.0.1:11434` |
@@ -25,6 +25,7 @@ Ayarlanabilir çalışma parametreleri için tek yetkili tanım `jarvis/config.p
 | `asr_threads` | `6` |
 | `tts_threads` | `4` |
 | `max_text_chars` | `1600` |
+| `reply_max_chars` | `6000` |
 | `max_sentence_chars` | `180` |
 | `history_max_chars` | `2400` |
 | `memory_max_chars` | `800` |
@@ -58,6 +59,27 @@ Ayarlanabilir çalışma parametreleri için tek yetkili tanım `jarvis/config.p
 | `analysis_frame_ms` | `40` |
 | `analysis_min_rms` | `0.001` |
 | `analysis_max_duration_s` | `30` |
+| `desktop_limit_per_minute` | `6` |
+| `desktop_min_interval_s` | `2.0` |
+| `desktop_max_tracked_processes` | `16` |
+| `control_id_cache_size` | `128` |
+| `plan_draft_ttl_s` | `600` |
+| `plan_max_steps` | `6` |
+| `plan_title_max_chars` | `100` |
+| `plan_step_max_chars` | `200` |
+| `plan_assumption_max_chars` | `200` |
+| `plan_max_assumptions` | `3` |
+| `plan_max_minutes` | `480` |
+| `plan_file_max_bytes` | `16384` |
+| `plan_context_max_chars` | `900` |
+| `ollama_startup_timeout_s` | `30` |
+| `ollama_probe_timeout_s` | `2` |
+| `model_download_timeout_s` | `120` |
+| `setup_http_max_bytes` | `1048576` |
+| `desktop_startup_timeout_s` | `30` |
+| `desktop_shutdown_timeout_s` | `5` |
+| `desktop_window_width` | `1120` |
+| `desktop_window_height` | `820` |
 
 ## Format ve veri sınırlarının yetkili konumları
 
@@ -65,11 +87,15 @@ Ayarlanabilir çalışma parametreleri için tek yetkili tanım `jarvis/config.p
 - Profil enum'ları ve sesli tanışma durumları: `jarvis/profile.py`.
 - Akustik gözlem sözleşmesi: `jarvis/contracts.py::AcousticObservation`; üretici şeması 1.
 - Mikrofon kalibrasyonunun sabit referans cümlesi ve disk şeması 1: `jarvis/calibration.py`.
-- Giriş PCM16 mono 16 kHz/512 örnek: protokol 2; frontend `capture-worklet.js` sabitleri bu sözleşmeyle birlikte değişmelidir.
+- Giriş PCM16 mono 16 kHz/512 örnek: protokol 3; frontend `capture-worklet.js` sabitleri bu sözleşmeyle birlikte değişmelidir.
 - TTS çıkış hızı ses envelope'unda taşınır; EMA adaptörü 24 kHz.
 - Browser oynatma sonrası mikrofon kuyruğu 350 ms: `jarvis/static/app.js::OUTPUT_TAIL_MS`.
 - ASR revision/dosya listesi: `jarvis/asr.py`; EMA revision/boyut/SHA256: `jarvis/tts.py`; tokenizer URL/SHA256: `jarvis/context.py`.
 - Hatıra şeması SQLite user_version 1: `jarvis/memory.py`.
+- Plan şeması 1, JSON schema, UUID ve zaman biçimi: `jarvis/plans.py`; tüm ayarlanabilir boyut/süre sınırları yukarıdaki Settings alanlarıdır.
+- Sabit Windows uygulama kataloğu ve Türkçe komut ayrıştırma: `jarvis/actions.py`; serbest komut/argüman kabul edilmez.
+- Masaüstü dış yönlenme/URI kuralları: `jarvis/desktop.py::NavigationGuard`; WebView2 için pywebview sürümü pyproject.toml desktop extra içinde sabittir.
+- Kurulumda izinli iki winget paketi ve WebView2 registry kimliği: `jarvis/setup_local.py`; yalnız --install-missing kurulum/download yetkisi verir.
 - Akustik inceleme varsayılan kapalı ve oturumluk: `server.Session` / frontend checkbox.
 - Güncelleme izin listesi ve dosya üst sınırı 16 MiB: `update_jarvis.py`.
 

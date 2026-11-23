@@ -1,4 +1,4 @@
-"""Offline, code-only Jarvis Voice 0.1.0/0.2.0 -> 0.2.1 update with verified backups.
+"""Offline code update to 0.3.0 with verified backups and unchanged base packages.
 
 Run with the installed app's Python 3.11. No application module is imported;
 models, profiles, memories, virtual environments and global settings are never
@@ -22,8 +22,8 @@ import tomllib
 import uuid
 
 
-RELEASE_VERSION = "0.2.1"
-SUPPORTED_TARGETS = {"0.1.0", "0.2.0", "0.2.1"}
+RELEASE_VERSION = "0.3.0"
+SUPPORTED_TARGETS = {"0.1.0", "0.2.0", "0.2.1", "0.3.0"}
 RELEASE_DIRS = {"jarvis", "tests", "docs"}
 RELEASE_FILES = {
     "KUR.cmd", "BASLAT.cmd", "pyproject.toml", "uv.lock", "README.md",
@@ -261,7 +261,7 @@ def _update(source: Path, target: Path, *, port_check=jarvis_port_in_use) -> dic
             raise UpdateError("Tamamlanmış kurulum bulunamadı. Çalışan eski klasördeki BASLAT.cmd dosyasını seç.")
     old_version, new_version = _version(target), _version(source)
     if old_version not in SUPPORTED_TARGETS or new_version != RELEASE_VERSION:
-        raise UpdateError(f"Bu güncelleme yalnız 0.1.0/0.2.0/0.2.1 kurulumunu {RELEASE_VERSION} sürümüne taşır.")
+        raise UpdateError(f"Bu güncelleme yalnız 0.1.0/0.2.0/0.2.1/0.3.0 kurulumunu {RELEASE_VERSION} sürümüne taşır.")
     old_project, new_project = _project(target), _project(source)
     if new_project.get("version") != RELEASE_VERSION:
         raise UpdateError("Yeni paket sürüm tanımları birbiriyle uyuşmuyor.")
@@ -271,6 +271,17 @@ def _update(source: Path, target: Path, *, port_check=jarvis_port_in_use) -> dic
             or old_project.get("dependencies") != new_project.get("dependencies")
             or old_project.get("requires-python") != new_project.get("requires-python")):
         raise UpdateError("Bağımlılıklar farklı. Bu çevrimdışı güncelleme Python paketlerini değiştirmez.")
+    # The only approved optional addition is the Windows desktop shell. KUR
+    # installs its locked packages afterwards; this code transaction stays
+    # offline and does not claim to roll back Python or global installations.
+    permitted_desktop = [
+        "pywebview==6.2.1 ; sys_platform == 'win32'",
+        "pythonnet==3.2.1 ; sys_platform == 'win32'",
+    ]
+    for project in (old_project, new_project):
+        optional = project.get("optional-dependencies", {})
+        if optional not in ({}, {"desktop": permitted_desktop}):
+            raise UpdateError("İsteğe bağlı paketler izin verilen masaüstü tanımıyla uyuşmuyor.")
     if port_check():
         raise UpdateError("Jarvis açık veya 8765 portu kullanımda. Jarvis terminalini Ctrl+C ile kapatıp yeniden dene.")
 
@@ -384,16 +395,25 @@ def update(source: Path, target: Path, *, port_check=jarvis_port_in_use) -> dict
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Mevcut Jarvis kurulumunu model indirmeden güncelle.")
-    parser.add_argument("--target", required=True, type=Path, help="Mevcut BASLAT.cmd dosyasının bulunduğu klasör")
+    parser.add_argument("--target", type=Path, help="Mevcut BASLAT.cmd dosyasının bulunduğu klasör")
+    parser.add_argument("--check-idle", action="store_true", help="Paket kurulumu öncesinde yalnız port kontrolü yap")
     args = parser.parse_args()
     try:
+        if args.check_idle:
+            if args.target is not None:
+                parser.error("--check-idle ile --target birlikte kullanılamaz")
+            if jarvis_port_in_use():
+                raise UpdateError("Jarvis açık veya 8765 portu kullanımda. Önce Jarvis penceresini kapat.")
+            return 0
+        if args.target is None:
+            parser.error("--target veya --check-idle gerekli")
         result = update(Path(__file__).parent, args.target)
     except (UpdateError, OSError) as exc:
         print(f"Guncelleme durduruldu: {exc}", file=sys.stderr)
         return 1
     print(f"Guncelleme tamamlandi: {result['from_version']} -> {result['to_version']}")
     print(f"Dogrulanan kod yedegi: {result['backup']}")
-    print("Mevcut kurulum klasorundeki BASLAT.cmd dosyasini acabilirsin.")
+    print("Kod aktarimi tamam. Masaustu paketleri icin mevcut klasordeki KUR.cmd kontrolu tamamlanmali.")
     return 0
 
 

@@ -5,17 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="dark">
     <meta name="referrer" content="no-referrer">
-    <title>Jarvis · Sesli sohbet</title>
+    <title>Jarvis · Yerel yardımcı</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23131e27'/%3E%3Ccircle cx='32' cy='32' r='19' fill='none' stroke='%239de2d7' stroke-width='5'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%239de2d7'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="/static/style.css?v=0.2.1">
-    <script src="/static/app.js?v=0.2.1" defer></script>
+    <link rel="stylesheet" href="/static/style.css?v=0.3.0">
+    <script src="/static/app.js?v=0.3.0" defer></script>
   </head>
   <body>
     <main class="app-shell">
       <header class="app-header">
-        <a class="brand" href="#" aria-label="Jarvis sesli sohbet" id="brand-link">
+        <a class="brand" href="#" aria-label="Jarvis yerel yardımcı" id="brand-link">
           <span class="brand-symbol" aria-hidden="true"><span></span></span>
-          <span><strong id="brand-name">Jarvis</strong><small>Sesli sohbet</small></span>
+          <span><strong id="brand-name">Jarvis</strong><small id="model-label">Yerel model bilgisi bekleniyor</small></span>
         </a>
         <div class="connection" id="connection" data-state="connecting" role="status">
           <span class="connection-dot" aria-hidden="true"></span>
@@ -23,7 +23,7 @@
         </div>
       </header>
 
-      <section class="voice-card" aria-labelledby="voice-title">
+      <section class="voice-card voice-card-compact" aria-labelledby="voice-title">
         <div class="card-eyebrow"><span></span><span>KENDİ ALANINDA KONUŞ</span></div>
         <div class="orb-area" aria-hidden="true">
           <div class="orb" id="orb" data-mode="idle">
@@ -66,19 +66,19 @@
         <button type="button" id="dismiss-notice" aria-label="Bildirimi kapat">×</button>
       </div>
 
-      <section class="conversation-section" aria-label="Konuşma dökümü">
+      <section class="conversation-section" aria-label="Sesli ve yazılı sohbet">
         <div class="section-toolbar">
           <label class="inline-toggle" for="show-transcript">
-            <input type="checkbox" id="show-transcript">
+            <input type="checkbox" id="show-transcript" checked>
             <span class="toggle-track" aria-hidden="true"></span>
-            <span>Konuşma dökümünü göster</span>
+            <span>Sohbeti göster</span>
           </label>
-          <button type="button" class="text-button" id="clear-transcript" hidden>Ekranı temizle</button>
+          <button type="button" class="text-button" id="clear-transcript">Ekranı temizle</button>
         </div>
-        <div class="transcript-panel" id="transcript-panel" hidden>
+        <div class="transcript-panel" id="transcript-panel">
           <div class="transcript-empty" id="transcript-empty">
-            <span>Konuşmaya burada da eşlik edebilirsin.</span>
-            <small id="transcript-hint">Söylediklerin ve yanıtlar bu pencerede görünür.</small>
+            <span>Yaz veya konuş. Aynı sohbetten devam edelim.</span>
+            <small id="transcript-hint">Söylediklerin, yazdıkların ve yanıtlar burada görünür.</small>
           </div>
           <div class="transcript-messages" id="transcript-messages" role="log" aria-label="Konuşma mesajları" aria-live="off"></div>
           <div class="sources-panel" id="sources-panel" hidden>
@@ -86,7 +86,40 @@
             <div id="source-list"></div>
           </div>
         </div>
+        <form id="text-form" class="chat-composer">
+          <label class="sr-only" for="text-input">Mesajın</label>
+          <div class="input-action">
+            <textarea id="text-input" rows="2" maxlength="1600" placeholder="Bir şey sor, bir plan iste veya sohbet et…" spellcheck="true"></textarea>
+            <button class="button button-small" type="submit" id="send-text" disabled>Gönder</button>
+          </div>
+          <div class="composer-options">
+            <label class="inline-toggle" for="speech-enabled"><input type="checkbox" id="speech-enabled" checked><span class="toggle-track" aria-hidden="true"></span><span>Sesli yanıt</span></label>
+            <span class="field-hint">Enter: gönder · Shift+Enter: yeni satır</span>
+          </div>
+          <p class="field-hint">Sesli yanıtı kapatıp yalnız yazarak konuşabilirsin. Tanışma ve mikrofon ölçümü sesli yönlendirilir.</p>
+        </form>
       </section>
+
+      <details class="settings-card" id="plans-details">
+        <summary><span>Planlarım</span><svg class="chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="settings-body">
+          <p class="profile-summary">“Plan oluştur: Bu akşam bir saat içinde odamı düzenlemek istiyorum” diyebilir veya yazabilirsin.</p>
+          <p class="field-hint">Planı inceleyip kaydettiğinde bu bilgisayarda tutulur. Adımlar kendiliğinden uygulanmaz; hatırlatma kurulmaz.</p>
+          <div class="section-toolbar plan-toolbar"><span id="plan-status" class="field-status" role="status">Plan bilgisi bekleniyor.</span><button id="plan-refresh" class="text-button" type="button" disabled>Planı yenile</button></div>
+          <article class="plan-card" id="plan-draft" hidden>
+            <span class="plan-kind">TASLAK · HENÜZ KAYDEDİLMEDİ</span>
+            <h2 id="plan-draft-title"></h2><ol id="plan-draft-steps"></ol>
+            <ul class="plan-assumptions" id="plan-draft-assumptions"></ul>
+            <div class="guided-actions"><button id="plan-save" class="button button-small" type="button" disabled>Planı kaydet</button><button id="plan-discard" class="button button-secondary" type="button" disabled>Taslağı kaldır</button></div>
+          </article>
+          <article class="plan-card" id="plan-saved" hidden>
+            <span class="plan-kind">KAYITLI PLAN</span>
+            <h2 id="plan-saved-title"></h2><ol id="plan-saved-steps"></ol>
+            <ul class="plan-assumptions" id="plan-saved-assumptions"></ul>
+            <button id="plan-delete" class="text-button" type="button" disabled>Kayıtlı planı sil</button>
+          </article>
+        </div>
+      </details>
 
       <details class="settings-card" id="profile-details">
         <summary><span>Tanışma ve sana göre ayarlar</span><svg class="chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
@@ -115,7 +148,7 @@
             <dl class="measurement-grid" id="calibration-measurements"></dl>
             <div class="calibration-phrase" id="calibration-phrase" hidden><span>Örnek cümle</span><p id="calibration-reference"></p><span>Duyduğum</span><p id="calibration-heard"></p></div>
             <button class="button button-small" id="calibration-apply" type="button" hidden>Mikrofon ayarını uygula</button>
-            <p class="field-hint">Bu kısa kontrol, tarayıcının işlediği mikrofon sesini ölçer. Ses kaydı saklanmaz; tek cümle genel konuşma doğruluğunu göstermez.</p>
+            <p class="field-hint">Bu kısa kontrol, uygulamaya ulaşan mikrofon sesini ölçer. Ses kaydı saklanmaz; tek cümle genel konuşma doğruluğunu göstermez.</p>
           </div>
         </div>
       </details>
@@ -130,7 +163,7 @@
         <div class="settings-body">
           <p class="profile-summary" id="acoustics-status"></p>
           <dl class="measurement-grid" id="acoustics-measurements"></dl>
-          <h2 class="measurement-subtitle">Tarayıcının mikrofon ayarları</h2>
+          <h2 class="measurement-subtitle">Mikrofon giriş ayarları</h2>
           <dl class="measurement-grid" id="capture-measurements"></dl>
           <ul class="measurement-notes" id="acoustics-limitations"></ul>
           <p class="field-hint">Bu değerler duygu veya sağlık durumunu belirlemez. Durumunu anlamak için söylediklerin ve açıkça paylaştıkların esas alınır.</p>
@@ -143,6 +176,12 @@
           <svg class="chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
         </summary>
         <div class="settings-body">
+          <label class="setting-row" for="desktop-enabled">
+            <span><strong>Bilgisayarda uygulama açma</strong><small>Hesap Makinesi, Not Defteri, Dosya Gezgini ve Paint. Her oturumda kapalı başlar.</small></span>
+            <span class="switch"><input type="checkbox" id="desktop-enabled" disabled><span class="toggle-track" aria-hidden="true"></span></span>
+          </label>
+          <div id="apps-panel" class="apps-panel" hidden><p class="field-hint">Örneğin “Hesap makinesini aç” diyebilirsin.</p><ul id="apps-list"></ul></div>
+          <p id="application-result" class="field-status" role="status" hidden></p>
           <label class="setting-row" for="acoustic-enabled">
             <span><strong>Ses özelliklerini incele (deneysel)</strong><small>Ses düzeyi, tempo ve duraklamalar ölçülür. Duygu veya hastalık teşhisi yapılmaz. Kayıt saklanmaz.</small></span>
             <span class="switch"><input type="checkbox" id="acoustic-enabled"><span class="toggle-track" aria-hidden="true"></span></span>
@@ -168,21 +207,11 @@
             <h2>Hatırladıkları</h2>
             <ul id="memory-list"></ul>
           </div>
+          <p class="field-hint memory-hint">Seni tanımama yardımcı olmak için “Bunu hatırla: Akşamları yarım saat çalışmayı tercih ediyorum” diyebilirsin. “Neleri hatırlıyorsun?” ile kayıtlarını sorabilirsin.</p>
         </div>
       </details>
 
-      <details class="text-test-card">
-        <summary>Yazarak dene<svg class="chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
-        <form id="text-form">
-          <label class="sr-only" for="text-input">Mesajın</label>
-          <div class="input-action">
-            <textarea id="text-input" rows="2" maxlength="1600" placeholder="Bir şey sor…" spellcheck="true"></textarea>
-            <button class="button button-small" type="submit" id="send-text" disabled>Gönder</button>
-          </div>
-        </form>
-      </details>
-
-      <footer class="app-footer"><span>Konuşmayı kendi ritminde sürdür.</span><span id="footer-hint">Başlamak için mikrofon izni gerekir.</span></footer>
+      <footer class="app-footer"><span>Yerel modelinle, kendi ritminde.</span><span id="footer-hint">Yazabilir veya mikrofonu açabilirsin.</span></footer>
     </main>
   </body>
 </html>

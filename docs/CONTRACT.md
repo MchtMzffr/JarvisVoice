@@ -1,12 +1,12 @@
-# Jarvis Voice sözleşmeleri — uygulama 0.2.1 / protokol 2
+# Jarvis Voice sözleşmeleri — uygulama 0.3.0 / protokol 3
 
-Bu uygulama bağımsız bir prototiptir; Decision Ecosystem depolarını/core bağımlılıklarını değiştirmez. Çalışma parametreleri için tek yetkili tanım `jarvis/config.py::Settings`, veri sözleşmeleri için `jarvis/contracts.py` ve `jarvis/profile.py` esas alınır. `PARAMETER_INDEX.md` bu kaynaklardan üretilir. ASR, TTS, LLM ve web çağrıları ayrı adaptörlerdir.
+Bu uygulama bağımsız bir prototiptir; Decision Ecosystem depolarını/core bağımlılıklarını değiştirmez. Çalışma parametreleri için tek yetkili tanım `jarvis/config.py::Settings`, veri sözleşmeleri için `jarvis/contracts.py`, `jarvis/profile.py` ve `jarvis/plans.py` esas alınır. `PARAMETER_INDEX.md` bu kaynaklardan üretilir. ASR, TTS, LLM, web ve Windows uygulama başlatma ayrı adaptörlerdir.
 
 ## Ses ve bağlantı
 
 Giriş: mono 16 kHz, little-endian PCM16, tam 512 örnek / 1024 bayt kare. Python VAD/ASR/analiz girişi float32 [-1,1]. TTS çıkışı PCM16; örnekleme hızı envelope içindedir (EMA 24 kHz). Tarayıcı aygıtı farklı hızda çalışabilir; frontend 16 kHz'e dönüştürür.
 
-WebSocket yalnız izin verilen localhost origin'lerinden, açılış anahtarıyla kabul edilir. İlk mesaj `{type:"hello", protocol:2, token:"..."}` olmalıdır. Aynı anda tek aktif oturum vardır; sunucu `session_id` üretir. Protokol 1 arayüzü reddedilir; uygulama ve statik dosyalar birlikte güncellenir.
+WebSocket yalnız izin verilen localhost origin'lerinden, açılış anahtarıyla kabul edilir. İlk mesaj `{type:"hello", protocol:3, token:"..."}` olmalıdır. Aynı anda tek aktif oturum vardır; sunucu `session_id` üretir. Protokol 1 ve 2 arayüzleri reddedilir; uygulama ve statik dosyalar birlikte güncellenir. Windows'ta aynı arayüz `jarvis/desktop.py` ile WebView2 penceresinde açılır. Python fonksiyonları JavaScript'e doğrudan açılmaz; bütün uygulama işlemleri aynı kimlik doğrulamalı protokolden geçer.
 
 | Yön | Olay | Alanlar / anlam |
 |---|---|---|
@@ -14,15 +14,19 @@ WebSocket yalnız izin verilen localhost origin'lerinden, açılış anahtarıyl
 | İstemci → sunucu | onboarding_start / onboarding_cancel | Sesli tanışma; eşleşen epoch ACK'i. |
 | İstemci → sunucu | profile_save | `request_id`, doğrulanacak `profile`; açık kullanıcı kaydı. |
 | İstemci → sunucu | calibration_start / calibration_cancel / calibration_apply | İstemci eşik belirlemez; yalnız sunucunun son uygun sonucu uygulanabilir. |
-| İstemci → sunucu | settings | web_enabled, barge_in, acoustic_enabled; isteğe bağlı api_key. |
+| İstemci → sunucu | settings | web_enabled, barge_in, acoustic_enabled, desktop_enabled, speech_enabled; isteğe bağlı api_key. Masaüstü/ses seçenekleri yalnız gerçek boolean kabul eder. |
+| İstemci → sunucu | apps_get / plan_get | Sabit uygulama kataloğunu veya mevcut taslak/kayıtlı planı okur; yazma yapmaz. |
+| İstemci → sunucu | plan_save / plan_discard / plan_delete | request_id ve güncel draft_id / plan_id; açık kullanıcı işlemi, eşleşen epoch ACK'i. |
 | İstemci → sunucu | capture_info | sample_rate, channel_count, echo_cancellation, noise_suppression, auto_gain_control. |
 | İstemci → sunucu | binary / played | PCM16 karesi; `played`: epoch, segment_id, tamamlanmış oynatma ACK'i. |
-| Sunucu → istemci | hello / ready / status / epoch | Kimlik, hazır olma, durum; epoch sunucunun tekelindedir. |
-| Sunucu → istemci | audio / audio_end | epoch, turn_id, segment_id, sample_rate, base64 PCM16, text. audio_end yeni sesin bittiğini bildirir; planlanmış sesi kesmez. |
+| Sunucu → istemci | hello / ready / status / epoch | Kimlik, hazır olma, durum; hello model ve endpoint=local taşır. Epoch sunucunun tekelindedir. |
+| Sunucu → istemci | audio / audio_end | epoch, turn_id, segment_id, sample_rate, base64 PCM16, text; audio ayrıca guided taşır. audio_end yeni sesin bittiğini bildirir; planlanmış sesi kesmez. |
 | Sunucu → istemci | profile / onboarding | Onaylı profil; rehberin active/stage/message bilgisi. |
 | Sunucu → istemci | calibration | prompt/noise/phrase/result/cancelled/error/applied aşaması ve varsa ölçümler. |
 | Sunucu → istemci | acoustics | epoch ve AcousticObservation şema 1. |
 | Sunucu → istemci | transcript / sources / memories | Metin; gerçek araç kaynakları; kullanıcının açıkça kaydettiği notlar. |
+| Sunucu → istemci | apps / application | apps: id, label, available kataloğu. application: epoch, app_id, label, status, message; pencerenin görünür açıldığını iddia etmez. |
+| Sunucu → istemci | plan | epoch, draft, saved; her biri doğrulanmış plan nesnesi veya null. |
 | Sunucu → istemci | metrics / capture_stop / error | Süreler; mikrofonu açıkça durdurma; sınırlı anlaşılır hata. |
 
 ## Profil — şema 1
@@ -73,9 +77,19 @@ Akustik inceleme oturum başında kapalıdır. Açıkken ASR ile ayrı sınırl�
 10. Ölçüm sözleşmesi duygu, tanı, kimlik veya kişilik alanı içermez. Model davranışı için ayrıca istem kuralları vardır; bunlar klinik doğrulama veya tam güvenlik garantisi değildir.
 11. Capture metadata izin listesi cihaz kimliği/etiketi/serbest metni atar. API anahtarı yalnız RAM'dedir; geri gönderilmez/loglanmaz.
 12. Kaynak URL'leri gerçek araç sonuçlarından gelir. Bu bağlantılar her iddianın doğruluğunu kanıtlamaz.
-13. 4096 token bağlamdan 1024 çıktı + 320 format payı ayrılır. `o200k_harmony` sayımıyla eski turlar ve kaynaklar gerektiğinde düşürülür. Yalnız oynatma ACK'i gelmiş cevap cümleleri sohbet geçmişine eklenir.
+13. 4096 token bağlamdan 1024 çıktı + 320 format payı ayrılır. `o200k_harmony` sayımıyla eski turlar ve kaynaklar gerektiğinde düşürülür. Sesli turda yalnız oynatma ACK'i gelmiş cevap cümleleri sohbet geçmişine eklenir. Sessiz yazışmada tam başarılı yanıt ve güncel epoch gerekir; eksik/iptal edilmiş akış geçmişe tamamlanmış cevap olarak yazılmaz. LLM yanıtı 6000 karakter sınırını aşarsa tamamlanmış sayılmaz.
 14. Çalışma anında eksik ses modeli otomatik indirilmez. Başlangıçta yerel Ollama ön yüklemesi başarısızsa model değiştirilmez; normal istekte yeniden denenir.
 15. Güncelleme öncesinde kod yedeği doğrulanır; kullanıcı verileri izin listesi dışındadır. Değişen bir kullanıcı dosyası, geri almada körlemesine ezilmez.
+16. Uygulama başlatma için doğrudan kullanıcı komutu, geçerli epoch, açık oturum izni, sabit katalog ve hız sınırı birlikte gerekir. Model veya web metni komut yönlendiricisine girmez. Serbest shell/PowerShell, dosya yolu veya argüman çalıştırılmaz. Stop gelecekteki işi keser; zaten başlatılmış bir uygulamayı geri almaz.
+17. Plan üretimi araçsız yerel Ollama JSON isteğidir. Model çıktısı dosya yolu/komut/yetki içeremez; şema dışı alanlar reddedilir. İptal edilen veya eski epoch'a ait sonuç taslak olarak bile yayımlanmaz. Taslak RAM'de 600 saniye yaşar; yalnız açık kaydetme mevcut tek planı atomik olarak değiştirir.
+18. Son 128 metin/plan kontrol kimliği oturum içinde yinelenen işlemi engeller. Bu, sonsuz süreli veya oturumlar arası exactly-once garantisi değildir. Uygulama açma ayrıca 6 istek/dakika ve en az 2 saniye aralıkla sınırlıdır.
+19. Masaüstü sunucusu portu önceden kendisi bağlar; port dolu/bilinmiyorsa başka servise bağlanan pencere açılmaz. Yerel pencere dış sayfaya yönlenmez. Yalnız kullanıcı tıklamasıyla doğrulanmış HTTP(S) kaynak sistem tarayıcısına gider. Dosya/özel URI ve indirme kapalıdır.
+
+## Plan — şema 1
+
+Kalıcı nesne: `schema_version`, `id`, `created_at`, `title`, `steps`, `assumptions`. Model yalnız son üç alanı üretebilir; kimlik ve UTC zamanını uygulama ekler. Adımlar `{text, minutes}` nesneleridir; süre tahmini bilinmiyorsa null. Başlık en fazla 100 karakter, 1–6 adımın metni en fazla 200 karakter, en fazla 3 varsayım ve her biri 200 karakterdir. Varsa adım süresi 1–480 dakika; dosya en fazla 16384 bayttır.
+
+`PlanStore` bozuk/gelecekteki şemayı, tekrar eden JSON anahtarını ve izin verilmeyen bağlantı yolunu sessizce sıfırlamaz. Yazma aynı dizinde geçici dosya, fsync ve atomik replace kullanır. Plan takvim işi veya otomatik hatırlatıcı değildir; uygulama açma yetkisi içermez. Kayıtlı planın en fazla 900 karakterlik özeti yerel sohbet bağlamına eklenir. Yapısal plan nesnesi web araç kararından çıkarılır; daha önce söylenen plan metni konuşma geçmişinde bulunabilir. Ayrıntı ve test eşlemesi [DESKTOP_0_3.md](DESKTOP_0_3.md) içindedir.
 
 ## Sürelerin anlamı
 
@@ -91,7 +105,7 @@ Yaklaşık gecikme ayrışımı: T_endpoint + max(T_ASR, T_analiz) + T_ilk_sesle
 
 ## Sürümleme ve değişiklik kapısı
 
-Uygulama SemVer **0.2.1**; dağıtım öncesi deneysel 0.x aşamasıdır. Protokol **2**; profil/kalibrasyon/gözlem şemaları **1**; SQLite user_version **1**. 0.1.0 verisi korunur, 0.1 frontend desteği 0.2.0 ile biter; bütün dosyaları birlikte taşıyan güncelleyici geçiş yoludur. Gelecekte protokol kırılması yeni numarayla, kalıcı şema kırılması açık migration ve yedek/geri alma tarifiyle yayımlanmalıdır. Yeni deprecation tarihleri o sürümün değişiklik kaydında duyurulur; burada verilmemiş takvim taahhüdü yoktur.
+Uygulama SemVer **0.3.0**; dağıtım öncesi deneysel 0.x aşamasıdır. Protokol **3**; profil/kalibrasyon/gözlem/plan şemaları **1**; SQLite user_version **1**. 0.1.0/0.2.0/0.2.1 verisi korunur. Protokol 1 desteği 0.2.0 ile, protokol 2 desteği 0.3.0 yayımlandığında biter (23 Kasım 2026). Tek yerel paket iki tarafı birlikte güncellediğinden paralel eski frontend desteği yoktur. Masaüstü bağımlılıklarını KUR.cmd tamamlar; bağımlılık/global paket kurulumu kod yedeğinin geri alma kapsamına girmez. Gelecekte protokol kırılması yeni numarayla, kalıcı şema kırılması açık migration ve yedek/geri alma tarifiyle yayımlanmalıdır. Başka bir deprecation takvimi taahhüt edilmemiştir.
 
 ## 0.2.1 düzeltmesi
 

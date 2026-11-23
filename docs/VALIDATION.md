@@ -1,4 +1,37 @@
-# Doğrulama — Jarvis Voice 0.2.1
+# Doğrulama — Jarvis Voice 0.3.0
+
+23 Kasım 2026. Model/ses doğruluğu, sözleşme testleri ve gerçek masaüstü pencere testi ayrı kanıtlardır.
+
+## Yerel otomatik kontroller
+
+Linux Python 3.11 ortamında **181 test keşfedildi: 178 geçti, 3 yalnız Windows socket testi atlandı; başarısız yok. 31 JavaScript testi geçti.** Python koşumu mevcut yerel tokenizer önbelleğini okudu; yazma testleri geçici klasörler kullanır. Bu sonuç gerçek Windows ses/mikrofon performansı ölçümü değildir.
+
+Yeni kontroller şunları kapsar:
+
+- Sabit uygulama kataloğu, negasyon/alıntı/komut zinciri reddi, shell=False, oturum izni ve hız sınırı.
+- Aynı kontrol kimliğinin yinelenmesi, eski epoch, iptal edilen plan üretimi, 600 saniyelik taslak süresi ve açık kaydetme.
+- Plan JSON alanları/boyutları, tekrar eden anahtarlar, bozuk/gelecekteki dosyanın korunması, atomik kayıt ve bağlantı yolu korumaları.
+- Profil/açık notların yerel plan istemine verilmesi; araçsız JSON formatı; eksik model cevabının reddi.
+- Sessiz chat sırasında TTS/mikrofon çağrısı olmaması; eksik cevabın tamamlanmış geçmişe girmemesi.
+- Masaüstü sunucusunun sahip olduğu socket, açılış/kapanış ve hatanın ham traceback/anahtar yazdırmaması (sahte native nesneler).
+- Kurulumun mevcut Ollama/modeli yeniden kurmaması; yalnız izinli iki winget paketi, sabit model adı, loopback API ve eksik indirme reddi.
+- 0.3.0 optional desktop bağımlılıklarının güncelleme uyumluluk kapısı.
+
+## Gerçek Windows pencere kontrolü
+
+Bu çalışma kopyası için GitHub Actions koşumu yayımdan sonra bu bölüme kaydedilecektir. `tests/desktop_smoke.py`, modeller indirilmeden `run_desktop(demo=True)` ile gerçek WebView2 penceresini açar. Amaç: yerel sayfa/kimlik doğrulamalı WebSocket, görünür chat kutusu, sessiz demo yanıtı ve listener kapanışını doğrulamak. İstenen PNG, native WebView2 CapturePreview ile gerçekten render edilen görünümden alınır. Demo cevabı gerçek GPT-OSS cevabı değildir.
+
+Yerel Chromium denemesi sayfa açılmadan `socket() failed: Operation not permitted` ile engellendi. Sandbox gevşetilmedi; bu denemeden görsel test veya ekran görüntüsü kanıtı üretilmedi.
+
+## Kullanıcı kabulünün sınırı
+
+Kullanıcı önceki sürümde konuşmaların güzel olduğunu ve kalibrasyonun olmuş gibi göründüğünü bildirdi. Bu geri bildirim 0.3.0 native pencerenin, fiziksel mikrofon/hoparlörün veya canlı GPT-OSS plan üretiminin kabulü değildir. İlk gerçek kabul: KUR/GUNCELLE tamamlanması → BASLAT ile tek Jarvis penceresi → kısa yazılı/sesli sohbet → açık izinle Hesap Makinesi → plan taslağı ve açık kaydetme. Windows pencere CI'si başarılı olsa da canlı ses ve kurulum diyalogları ayrıca kullanıcı ortamında gözlenmelidir.
+
+EMA/Whisper adaptörleri, modeller ve örnek ses bu sürümde değiştirilmedi. Önceki ses ölçümleri aşağıda tarihsel kayıt olarak korunmuştur; yeni benchmark gibi yorumlanmaz.
+
+---
+
+# Tarihsel kayıt — Jarvis Voice 0.2.1
 
 ## 0.2.1 hata düzeltmesinin doğrulanması
 

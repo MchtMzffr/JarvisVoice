@@ -1,40 +1,44 @@
-# Uyumluluk ve kaynaklar
+# Uyumluluk ve kaynaklar — 0.3.0
 
-| Bileşen | Sabit sürüm / sözleşme | Doğrulama |
+| Bileşen | Sabit sürüm / sözleşme | Doğrulama kapsamı |
 |---|---|---|
-| Uygulama | 0.2.1 / protokol 2 | Linux: 107 Python geçti, 3 Windows testi atlandı; 25 JavaScript geçti |
-| Python | 3.11.18 | Linux kurulum ve gerçek ses kontrolü; Windows için yönetilen sürüm isteği |
-| Ollama | Kullanıcıda 0.40.17 | Kullanıcının model/GPU testi; paket değiştirmez |
-| Model | gpt-oss:20b / think low / 4096 | Kullanıcının mevcut kurulumu |
-| faster-whisper | 1.2.1 | Gerçek CPU yükleme/ASR |
-| CTranslate2 | 4.9.1 | CPU int8 |
-| ONNX Runtime | 1.32.0 | CPU + importtan önce telemetri opt-out |
-| PyAV | 16.1.0 | Python 3.11 uyumlu sabit sürüm |
-| EMA Lightning | 1.1.2 | Gerçek CPU sentezi |
-| PyTorch | 2.10.0+cpu | CPU wheel; CUDA paketi kullanılmaz |
-| normalizer-tr | 0.8.1 | Hazır Windows x64 wheel |
+| Uygulama | 0.3.0 / protokol 3 | Sonuç ve koşum kimlikleri [VALIDATION.md](VALIDATION.md) içinde |
+| Python | 3.11.18; proje Python 3.11 minor sürümüyle sınırlı | Windows kurulumu yönetilen Python ister; CI Python 3.11 kullanır |
+| Ollama | Kullanıcının bildirdiği sürüm 0.40.17 | Var olan kurulum korunur; eksikse KUR.cmd resmî winget paketini kurar |
+| Model | gpt-oss:20b / think low / 4096 | Kullanıcının mevcut modeli; eksikse yalnız açık kurulum aşamasında indirilir |
+| Masaüstü pencere | pywebview 6.2.1 + pythonnet 3.2.1 | Windows için desktop extra; test kapsamı ayrıca kaydedilir |
+| Web motoru | Microsoft Edge WebView2 Runtime | Evergreen runtime sürümü işletim sistemi tarafından güncellenir; Python lock dosyası runtime'ı sabitlemez |
+| faster-whisper / CTranslate2 | 1.2.1 / 4.9.1 | Önceki sürümde gerçek CPU int8 yükleme/ASR; adaptör korunur |
+| ONNX Runtime / PyAV | 1.32.0 / 16.1.0 | CPU; ONNX telemetri opt-out native importtan önce |
+| EMA Lightning | 1.1.2 | Önceki sürümde gerçek Türkçe CPU sentezi; ses adaptörü değişmedi |
+| PyTorch | 2.10.0+cpu | CPU wheel; CUDA Python paketi kurulmaz |
+| normalizer-tr | 0.8.1 | Windows x64 wheel |
 | tiktoken | 0.12.0 / o200k_harmony | Yerel doğrulanmış tokenizer dosyası |
-| uv | 0.13.9 | Windows dağıtımı SHA256 ile sabitlenmiş |
-| Tarayıcı | Güncel Chrome / Edge, WebAudio + AudioWorklet | Gerçek Windows tarayıcı testi bekliyor |
+| uv | 0.13.9 | Windows indirmesi SHA256 ile sabit |
+| Geliştirici tarayıcı modu | --browser; Chrome / Edge WebAudio + AudioWorklet | Windows'ta varsayılan değildir; yalnız açık seçenekle kullanılır |
 
-Bağımlılıklar `pyproject.toml` ve `uv.lock` içinde sabitlenmiştir. Bunları güncellemek, yeni uyumluluk ve telemetri kontrolü gerektirir. 0.2.0, 0.1.0 ile aynı Python bağımlılıklarını kullanır; yalnız uygulama sürümü ve kaynak dosyaları güncellenir.
+15 ana Python requirement korunmuştur. 0.3.0 yalnız Windows `desktop` optional dependency grubunu ekler; `uv.lock` onun geçişli paketlerini de sabitler. `KUR.cmd`, `uv sync --frozen --extra desktop` kullanır. Paket değişikliği uyumluluk/telemetri incelemesi gerektirir. Ollama ve WebView2 işletim sistemi paketleri bu lock'un kapsamında değildir.
 
 ## Geçiş ve veri matrisi
 
 | Kaynak → hedef | Destek / işlem |
 |---|---|
-| Tamamlanmış 0.1.0 veya 0.2.0 → 0.2.1 | GUNCELLE.cmd; mevcut Python/model/veri korunur, değişen kod yedeklenir. |
-| 0.2.1 → 0.2.1 | Aynı çevrimdışı güncelleyici yeniden uygulamayı destekler. |
-| Yeni kurulum | KUR.cmd; mevcut Ollama modeli kullanılır. |
-| Protokol 1 arayüz → protokol 2 sunucu | Reddedilir; arayüz ve sunucu birlikte güncellenmeli. |
-| SQLite user_version 1 | Aynı şema; migration gerekmez. |
-| Profil / mikrofon eşiği / akustik gözlem | Yeni şemalar 1; profil ve kalibrasyon dosyası yoksa varsayılanlarla başlar. |
-| Bozuk veya gelecekteki kalıcı şema | Sessiz sıfırlama yok; dosya korunur, başlatma/kayıt durur. |
-| 0.2.0 → 0.1.0 kod geri alma | Güncelleyicinin doğrulanmış kod yedeğiyle manuel; data korunur, yeni profil/kalibrasyon 0.1 tarafından kullanılmaz. |
+| Tamamlanmış 0.1.0 / 0.2.0 / 0.2.1 → 0.3.0 | Ayrı yeni kaynak klasöründe GUNCELLE.cmd; eski BASLAT.cmd seçilir. Kod yedeğinden sonra hedef KUR.cmd masaüstü bileşenlerini tamamlar. |
+| 0.3.0 → 0.3.0 | Aynı güncelleyici yeniden uygulamayı destekler. |
+| Doğrudan Git klonu içinde kurulmuş uygulama | Jarvis'i kapat → git pull --ff-only → KUR.cmd → BASLAT.cmd. Aynı klasöre GUNCELLE.cmd uygulanmaz. |
+| Yeni kurulum | ZIP çıkar → KUR.cmd → BASLAT.cmd. Ollama/WebView2/model varsa yeniden kurulmaz/indirilmez. |
+| Protokol 1 veya 2 arayüz → protokol 3 sunucu | Bağlantı reddedilir; bütün kaynak/statik dosyalar birlikte güncellenmeli. |
+| SQLite user_version 1 / profil 1 / kalibrasyon 1 | Şemalar korunur; migration gerekmez. |
+| Akustik gözlem 1 | Oturumluk; ham ses/ölçüm geçmişi kaydedilmez. |
+| Plan 1 | Yeni isteğe bağlı data/plan.json; yokluğu normaldir. Eski sürümler dosyayı kullanmaz. |
+| Bozuk veya gelecekteki kalıcı şema | Sessiz sıfırlama yok; dosya korunur ve ilgili işlem durur. |
+| 0.3.0 kod geri alma | GUNCELLE'nin doğrulanmış kod yedeğiyle manuel. data korunur; plan eski sürümde kullanılmaz. |
 
-Protokol 1 desteği 0.2.0 yayımlandığında sonlandırılır; ayrı geçiş süresi uygulanmaz çünkü aynı yerel paket iki tarafı birlikte taşır. Gelecekte kalıcı şema kırılması için açık migration ve geri alma planı gerekir. 0.x sürümleri deneysel geliştirmedir; klinik/üretim sertifikasyonu anlamı taşımaz.
+**Kod geri alma ile paket geri alma ayrıdır.** Güncelleyici `.venv`, model veya kullanıcı verisini kopyalamaz. Ardından çalışan KUR.cmd bağımlılıkları senkronlar ve eksik işletim sistemi bileşenini kurabilir. Bu aşama başarısız olursa kod yedeği bu dış kurulumları geri almaz; hata açıkça gösterilir ve KUR.cmd yeniden çalıştırılabilir. Git pull da güncelleyicinin yedekleme protokolünü kullanmaz.
 
-Akustik ölçüm ek NumPy dışı bağımlılık gerektirmez. emotion2vec veya başka duygu modeli bu pakete kurulmaz. Beğenilen EMA adaptörü ve örnek WAV, 0.1.0 ile aynı baytlardır. Windows güncelleme seçicisi, fiziksel mikrofon ve gerçek tarayıcı uçtan uca doğrulaması beklemektedir.
+Protokol 1 desteği 0.2.0 ile sonlandırıldı; protokol 2 desteği 0.3.0 yayımlandığında (23 Kasım 2026) sonlandırılır. İki taraf aynı yerel paketle taşınır. Kalıcı şema kırılması gelecekte açık migration, uyumluluk matrisi ve geri alma tarifi gerektirir. 0.x sürümleri deneysel geliştirmedir.
+
+Akustik ölçüm NumPy kullanır; duygu veya hastalık sınıflandırıcısı içermez. Beğenilen EMA adaptörü ve örnek WAV korunur. Otomatik Windows pencere testi ile kullanıcının fiziksel mikrofon/hoparlör ve canlı model deneyimi farklı kabul aşamalarıdır.
 
 ## Birincil kaynaklar
 
@@ -43,6 +47,11 @@ Akustik ölçüm ek NumPy dışı bağımlılık gerektirmez. emotion2vec veya b
 - Mikrofonun gerçek ayarları: https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/getSettings
 - GPT-OSS giriş/çıkış türleri: https://developers.openai.com/api/docs/models/gpt-oss-20b
 - Ollama API: https://docs.ollama.com/api/chat
+- Ollama Windows: https://docs.ollama.com/windows
+- Ollama JSON schema: https://docs.ollama.com/capabilities/structured-outputs
+- pywebview kurulum: https://pywebview.flowrl.com/guide/installation
+- pywebview native pencere: https://pywebview.flowrl.com/api/
+- WebView2 dağıtımı: https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution
 - Düşünme alanı: https://docs.ollama.com/capabilities/thinking
 - Web API: https://docs.ollama.com/capabilities/web-search
 - faster-whisper: https://github.com/SYSTRAN/faster-whisper/tree/v1.2.1
@@ -59,4 +68,4 @@ Akustik ölçüm ek NumPy dışı bağımlılık gerektirmez. emotion2vec veya b
 
 Bu ZIP model ağırlıklarını veya üçüncü taraf paket ikililerini dağıtmaz; kurulum bunları ilgili resmî kaynaklardan alır. GPT-OSS ve EMA model/kodları Apache-2.0; faster-whisper ve Whisper/Silero bileşenleri MIT; PyTorch BSD türü lisans; normalizer-tr Apache-2.0; uv MIT/Apache-2.0; tiktoken MIT lisanslıdır. Bağımlılıkların tam lisans/notice dosyaları kurulan paketlerin içindedir. Uygulama kaynak kodu bu kullanıcı için oluşturulmuştur; ticari bir ürünün tamamına yönelik lisans denetimi yapılmış sayılmaz.
 
-0.2.1 yalnız Windows port kontrolü/hata görünürlüğü düzeltmesi ve geliştirme kayıtları ekler; protokol 2, veri şemaları 1 ve bağımlılıklar korunur.
+Bu depoda uygulama kaynak kodu için ayrıca bir açık kaynak lisansı seçilmiş değildir. Herkese açık indirme ile üçüncü taraflara lisans hakları verme aynı şey değildir; mevcut üçüncü taraf lisansları kurulu paketlerde korunur.

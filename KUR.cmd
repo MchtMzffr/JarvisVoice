@@ -11,10 +11,16 @@ set "PYTHONUTF8=1"
 set "ORT_DISABLE_TELEMETRY=1"
 set "HF_HUB_DISABLE_TELEMETRY=1"
 set "HF_HUB_DISABLE_IMPLICIT_TOKEN=1"
-echo Jarvis Voice 0.2.1 - ilk kurulum
-echo Mevcut Ollama ve GPT-OSS modeli kullanilacak.
-echo Ilk kurulumda Python, paketler ve yaklasik 525 MB ses modeli indirilir.
+echo Jarvis Voice 0.3.0 - masaustu kurulumu
+echo Mevcut Ollama ve GPT-OSS kullanilir; eksikse kurulum tamamlanir.
+echo Model yoksa yaklasik 13 GB indirme ve ek disk alani gerekir.
+echo Kurulumdan once acik Jarvis penceresini kapat.
+echo Ilk kurulumda Python, masaustu paketleri ve yaklasik 525 MB ses modeli indirilir.
 echo.
+if not exist ".venv\Scripts\python.exe" goto idle_checked
+".venv\Scripts\python.exe" update_jarvis.py --check-idle
+if errorlevel 1 goto fail
+:idle_checked
 if not exist ".runtime" mkdir ".runtime"
 if exist ".runtime\uv.exe" goto dependencies
 echo Uygulamaya ozel kurulum araci indiriliyor...
@@ -22,7 +28,10 @@ powershell.exe -NoProfile -Command "$ErrorActionPreference='Stop'; [Net.ServiceP
 if errorlevel 1 goto fail
 :dependencies
 echo Python 3.11 ve sabitlenmis CPU paketleri kuruluyor...
-".runtime\uv.exe" sync --frozen --python 3.11.18 --no-dev
+".runtime\uv.exe" sync --frozen --extra desktop --python 3.11.18 --no-dev
+if errorlevel 1 goto fail
+echo Yerel yapay zeka ve masaustu bilesenleri kontrol ediliyor...
+".venv\Scripts\python.exe" -m jarvis.setup_local --install-missing
 if errorlevel 1 goto fail
 echo Ses modeli dosyalari hazirlaniyor...
 ".venv\Scripts\python.exe" -m jarvis.prepare
@@ -32,12 +41,12 @@ echo Kurulumun gercek model yukleme kontrolu yapiliyor...
 if errorlevel 1 goto fail
 echo.
 echo Kurulum tamamlandi. BASLAT.cmd dosyasini acabilirsin.
-pause
+if /I not "%~1"=="--no-pause" pause
 exit /b 0
 :fail
 echo.
 echo Kurulum tamamlanamadi. Yukaridaki son hata metnini paylas.
 echo DLL yukleme hatasi varsa Microsoft Visual C++ x64 runtime gerekebilir.
-echo Genel Python, Ollama ve Windows ExecutionPolicy ayarlari degistirilmedi.
-pause
+echo Ayrinti icin yukaridaki hata mesajini kontrol et. KUR.cmd yeniden calistirilabilir.
+if /I not "%~1"=="--no-pause" pause
 exit /b 1

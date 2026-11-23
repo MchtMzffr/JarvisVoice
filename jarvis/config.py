@@ -6,7 +6,7 @@ import os
 
 @dataclass(frozen=True)
 class Settings:
-    protocol_version: int = 2
+    protocol_version: int = 3
     host: str = "127.0.0.1"
     port: int = 8765
     ollama_url: str = "http://127.0.0.1:11434"
@@ -27,6 +27,7 @@ class Settings:
     asr_threads: int = 6
     tts_threads: int = 4
     max_text_chars: int = 1600
+    reply_max_chars: int = 6000
     max_sentence_chars: int = 180
     history_max_chars: int = 2400
     memory_max_chars: int = 800
@@ -60,6 +61,27 @@ class Settings:
     analysis_frame_ms: int = 40
     analysis_min_rms: float = 0.001
     analysis_max_duration_s: int = 30
+    desktop_limit_per_minute: int = 6
+    desktop_min_interval_s: float = 2.0
+    desktop_max_tracked_processes: int = 16
+    control_id_cache_size: int = 128
+    plan_draft_ttl_s: int = 600
+    plan_max_steps: int = 6
+    plan_title_max_chars: int = 100
+    plan_step_max_chars: int = 200
+    plan_assumption_max_chars: int = 200
+    plan_max_assumptions: int = 3
+    plan_max_minutes: int = 480
+    plan_file_max_bytes: int = 16384
+    plan_context_max_chars: int = 900
+    ollama_startup_timeout_s: int = 30
+    ollama_probe_timeout_s: int = 2
+    model_download_timeout_s: int = 120
+    setup_http_max_bytes: int = 1048576
+    desktop_startup_timeout_s: int = 30
+    desktop_shutdown_timeout_s: int = 5
+    desktop_window_width: int = 1120
+    desktop_window_height: int = 820
 
 
 SETTINGS = Settings()

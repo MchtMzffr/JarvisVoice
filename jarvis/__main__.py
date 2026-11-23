@@ -1,40 +1,34 @@
+"""Start the Windows desktop application or an explicit developer mode."""
 import argparse
-import asyncio
-import socket
-import webbrowser
-import uvicorn
-from .config import SETTINGS
-from .server import Runtime, create_app
+import sys
+
+from .desktop import DesktopError, report_error, run_browser, run_desktop
 
 
-async def run(demo=False, no_browser=False):
-    runtime = Runtime(demo=demo)
-    app = create_app(runtime)
-    server = uvicorn.Server(uvicorn.Config(app, host=SETTINGS.host, port=SETTINGS.port, log_level="warning", access_log=False, ws_max_size=65536, workers=1))
-    task = asyncio.create_task(server.serve())
-    while not server.started and not task.done():
-        await asyncio.sleep(0.1)
-    if server.started:
-        url = f"http://{SETTINGS.host}:{SETTINGS.port}/#token={runtime.token}"
-        print("Jarvis Voice açıldı. Kapatmak için bu pencerede Ctrl+C kullan.", flush=True)
-        if not no_browser:
-            webbrowser.open(url)
-        else:
-            # Development-only local URL; this flag is not used by the Windows launcher.
-            print(url, flush=True)
-    await task
-
-
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--demo", action="store_true", help="UI/protocol test; no speech models")
-    parser.add_argument("--no-browser", action="store_true")
-    args = parser.parse_args()
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--desktop", action="store_true", help="Windows desktop window")
+    mode.add_argument("--browser", action="store_true", help="Explicit system browser mode")
+    mode.add_argument("--no-browser", action="store_true", help="Headless local server; no launch token is printed")
+    args = parser.parse_args(argv)
+    use_desktop = args.desktop or (sys.platform == "win32" and not args.browser and not args.no_browser)
     try:
-        asyncio.run(run(args.demo, args.no_browser))
+        if use_desktop:
+            run_desktop(demo=args.demo)
+        else:
+            run_browser(demo=args.demo, no_browser=args.no_browser)
+        return 0
     except KeyboardInterrupt:
-        pass
+        return 0
+    except DesktopError as exc:
+        report_error(str(exc))
+        return 1
+    except Exception:
+        report_error("Jarvis başlatılamadı. KUR.cmd ile kurulum kontrolünü yeniden çalıştır.")
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

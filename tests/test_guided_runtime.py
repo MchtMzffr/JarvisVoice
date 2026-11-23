@@ -304,18 +304,19 @@ class GuidedRuntimeTests(unittest.IsolatedAsyncioTestCase):
 
 
 class GuidedProtocolTests(unittest.TestCase):
-    def test_protocol_two_is_accepted_and_protocol_one_is_rejected(self):
-        self.assertEqual(server.SETTINGS.protocol_version, 2)
+    def test_protocol_three_is_accepted_and_older_protocols_are_rejected(self):
+        self.assertEqual(server.SETTINGS.protocol_version, 3)
         with tempfile.TemporaryDirectory() as directory, patch.object(server, "DATA_ROOT", Path(directory)):
             runtime = server.Runtime(demo=True)
             with TestClient(server.create_app(runtime)) as client:
                 headers = {"origin": f"http://127.0.0.1:{server.SETTINGS.port}"}
+                for old_protocol in (1, 2):
+                    with client.websocket_connect("/ws", headers=headers) as ws:
+                        ws.send_json({"type": "hello", "protocol": old_protocol, "token": runtime.token})
+                        with self.assertRaises(WebSocketDisconnect):
+                            ws.receive_json()
                 with client.websocket_connect("/ws", headers=headers) as ws:
-                    ws.send_json({"type": "hello", "protocol": 1, "token": runtime.token})
-                    with self.assertRaises(WebSocketDisconnect):
-                        ws.receive_json()
-                with client.websocket_connect("/ws", headers=headers) as ws:
-                    ws.send_json({"type": "hello", "protocol": 2, "token": runtime.token})
+                    ws.send_json({"type": "hello", "protocol": 3, "token": runtime.token})
                     self.assertEqual(ws.receive_json()["type"], "hello")
                     self.assertEqual(ws.receive_json()["type"], "ready")
                     self.assertEqual(ws.receive_json()["type"], "profile")

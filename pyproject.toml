@@ -1,7 +1,7 @@
 [project]
 name = "jarvis-voice-local"
-version = "0.2.1"
-description = "Local Turkish voice companion for an existing Ollama model"
+version = "0.3.0"
+description = "Local Turkish desktop companion with voice, chat and Ollama"
 requires-python = ">=3.11,<3.12"
 dependencies = [
   "fastapi==0.165.0",
@@ -19,6 +19,12 @@ dependencies = [
   "torch==2.10.0+cpu",
   "tzdata==2026.6",
   "tiktoken==0.12.0",
+]
+
+[project.optional-dependencies]
+desktop = [
+  "pywebview==6.2.1 ; sys_platform == 'win32'",
+  "pythonnet==3.2.1 ; sys_platform == 'win32'",
 ]
 
 [tool.uv]

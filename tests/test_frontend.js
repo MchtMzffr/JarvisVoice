@@ -63,7 +63,7 @@ class Element {
   get firstElementChild() { return this.children[0]; }
 }
 
-function harness(t) {
+function harness(t, options = {}) {
   const nodes = new Map();
   for (const match of html.matchAll(/<([a-z]+)[^>]*\sid="([^"]+)"[^>]*>/g)) {
     const element = new Element(match[1]);
@@ -73,7 +73,7 @@ function harness(t) {
     element.checked = /\bchecked(?:\s|>)/.test(match[0]);
     nodes.set(match[2], element);
   }
-  const record = { controls: [], binary: [], sources: [], tracks: [], worklets: [] };
+  const record = { controls: [], binary: [], sources: [], tracks: [], worklets: [], contexts: [], confirmations: [] };
   let now = 0;
   let nextTimer = 0;
   const timers = new Map();
@@ -96,6 +96,7 @@ function harness(t) {
 
   class AudioContext {
     constructor() {
+      record.contexts.push(this);
       this.state = "running";
       this.destination = {};
       this.audioWorklet = { addModule: async () => {} };
@@ -141,11 +142,16 @@ function harness(t) {
   let serverEpoch = 0;
   let socket;
   let configured = false;
+  let speechEnabled = true;
+  let planDraft = null;
+  let planSaved = null;
+  let confirmation = true;
   const defaultProfile = { schema_version: 1, assistant_name: "Jarvis", user_name: "", style: "friendly", verbosity: "short", pause: "balanced", output: "speakers", onboarding_complete: false };
   class WebSocket {
     static OPEN = 1;
     constructor() {
       socket = this;
+      planDraft = null; // A reconnect creates a new server session, not a durable draft.
       this.readyState = 1;
       this.bufferedAmount = 0;
       this.deferredControls = [];
@@ -162,10 +168,20 @@ function harness(t) {
       if (message.type === "text") {
         this.deliver({ type: "transcript", role: "user", epoch: serverEpoch, text: message.text });
         this.deliver({ type: "transcript", role: "assistant", epoch: serverEpoch, text: "Merhaba." });
-        this.audio("text-reply");
+        if (speechEnabled) this.audio("text-reply");
         this.deliver({ type: "audio_end", epoch: serverEpoch });
       } else if (message.type === "profile_save") {
         this.deliver({ type: "profile", profile: message.profile, onboarding: { active: false, stage: "done" } });
+      } else if (["plan_save", "plan_discard", "plan_delete"].includes(message.type)) {
+        if (message.type === "plan_save" && planDraft && message.draft_id === planDraft.id) {
+          planSaved = planDraft;
+          planDraft = null;
+        } else if (message.type === "plan_discard" && planDraft && message.draft_id === planDraft.id) {
+          planDraft = null;
+        } else if (message.type === "plan_delete" && planSaved && message.plan_id === planSaved.id) {
+          planSaved = null;
+        }
+        this.deliver({ type: "plan", epoch: serverEpoch, draft: planDraft, saved: planSaved });
       } else {
         this.deliver({ type: "status", message: message.type === "stop" ? "Mikrofon kapalı." : "Seni dinliyorum…" });
       }
@@ -180,13 +196,18 @@ function harness(t) {
       queueMicrotask(() => {
         if (message.type === "hello") {
           if (this.deferHello) return;
-          this.deliver({ type: "hello", epoch: serverEpoch, ready: true });
-          this.deliver({ type: "ready", ready: true });
+          this.deliver({ type: "hello", epoch: serverEpoch, ready: options.ready !== false, model: "gpt-oss:20b", endpoint: "local" });
+          this.deliver({ type: "ready", ready: options.ready !== false });
           this.deliver({ type: "profile", profile: defaultProfile, onboarding: { active: false, stage: "" } });
         } else if (message.type === "settings") {
           if (message.api_key !== undefined) configured = !!message.api_key;
-          this.deliver({ type: "settings", web_enabled: message.web_enabled && configured, barge_in: message.barge_in, api_key_configured: configured, acoustic_enabled: message.acoustic_enabled });
-        } else if (["start", "stop", "interrupt", "text", "onboarding_start", "onboarding_cancel", "calibration_start", "calibration_cancel", "calibration_apply", "profile_save"].includes(message.type)) {
+          speechEnabled = message.speech_enabled === true;
+          this.deliver({ type: "settings", web_enabled: message.web_enabled && configured, barge_in: message.barge_in, api_key_configured: configured, acoustic_enabled: message.acoustic_enabled, desktop_enabled: message.desktop_enabled, speech_enabled: speechEnabled });
+        } else if (message.type === "plan_get") {
+          this.deliver({ type: "plan", epoch: serverEpoch, draft: planDraft, saved: planSaved });
+        } else if (message.type === "apps_get") {
+          this.deliver({ type: "apps", items: [{ id: "calculator", label: "Hesap Makinesi", available: true }] });
+        } else if (["start", "stop", "interrupt", "text", "onboarding_start", "onboarding_cancel", "calibration_start", "calibration_cancel", "calibration_apply", "profile_save", "plan_save", "plan_discard", "plan_delete"].includes(message.type)) {
           if (this.deferEpochs) this.deferredControls.push(message);
           else this.acknowledge(message);
         }
@@ -201,6 +222,7 @@ function harness(t) {
     // Any accidental persistent storage access fails the test immediately.
     get localStorage() { throw new Error("localStorage must not be used"); },
     addEventListener: (name, listener) => browserEvents.set(name, listener), scrollTo() {},
+    confirm(message) { record.confirmations.push(message); return confirmation; },
   };
   const document = {
     getElementById: (id) => { assert(nodes.has(id), `missing HTML id: ${id}`); return nodes.get(id); },
@@ -215,6 +237,12 @@ function harness(t) {
   return {
     get socket() { return socket; }, get epoch() { return serverEpoch; }, record, storage, location,
     clock, media, el: (id) => nodes.get(id),
+    confirm(value) { confirmation = value; },
+    setPlans(draft, saved = null) {
+      planDraft = draft;
+      planSaved = saved;
+      socket.deliver({ type: "plan", epoch: serverEpoch, draft, saved });
+    },
     async start() { await flush(); await nodes.get("voice-toggle").fire("click"); await flush(); },
     unsolicitedEpoch() { serverEpoch += 1; socket.deliver({ type: "epoch", epoch: serverEpoch }); },
   };
@@ -225,7 +253,7 @@ test("authenticated startup removes the fragment; API key stays out of storage",
   await flush();
   assert.equal(h.location.hash, "");
   assert.equal(h.storage.get("jarvis_voice_launch_token"), "test-launch-token");
-  assert.deepEqual(h.record.controls[0], { type: "hello", token: "test-launch-token", protocol: 2 });
+  assert.deepEqual(h.record.controls[0], { type: "hello", token: "test-launch-token", protocol: 3 });
   assert.equal(h.el("voice-toggle").disabled, false);
   h.el("api-key").value = "test-only-api-key";
   await h.el("api-key-form").fire("submit");
@@ -609,4 +637,212 @@ test("acoustic observations cannot survive stop, disconnect, or an outdated epoc
   h.socket.close(1000);
   assert.equal(h.el("acoustic-enabled").checked, false);
   assert.equal(h.el("acoustics-details").hidden, true);
+});
+
+function planSample(id = "a".repeat(32), title = "Akşam çalışma planı") {
+  return { schema_version: 1, id, title, created_at: "2026-11-23T12:00:00+00:00",
+    steps: [{ text: "Çalışma alanını hazırla.", minutes: 10 }, { text: "İlk örneği dene.", minutes: null }],
+    assumptions: ["Bu akşam yarım saat ayırabildiğini varsaydım."] };
+}
+
+test("visible chat waits for readiness and text-only mode needs no microphone or audio context", async (t) => {
+  const h = harness(t, { ready: false });
+  await flush();
+  assert.equal(h.el("transcript-panel").hidden, false);
+  assert.equal(h.el("show-transcript").checked, true);
+  assert.match(h.el("model-label").textContent, /Yerel model · gpt-oss:20b/);
+  assert.equal(h.el("send-text").disabled, true);
+  assert.equal(h.el("voice-toggle").disabled, true);
+  assert.equal(h.record.controls.filter((item) => item.type === "plan_get").length, 0);
+  h.socket.deliver({ type: "ready", ready: true });
+  await flush();
+  h.socket.deliver({ type: "ready", ready: true });
+  await flush();
+  assert.equal(h.record.controls.filter((item) => item.type === "plan_get").length, 1);
+  assert.equal(h.el("speech-enabled").checked, true);
+  h.el("speech-enabled").checked = false;
+  await h.el("speech-enabled").fire("change");
+  h.el("text-input").value = "Yalnız yazarak sohbet edelim.";
+  await h.el("text-form").fire("submit");
+  assert.equal(h.record.controls.filter((item) => item.type === "text").at(-1).text, "Yalnız yazarak sohbet edelim.");
+  assert.equal(h.record.contexts.length, 0);
+  assert.equal(h.record.tracks.length, 0);
+  assert.equal(h.record.sources.length, 0);
+  assert.equal(h.el("transcript-messages").children.at(-1).children[1].textContent, "Merhaba.");
+  assert.deepEqual([...h.storage.keys()], ["jarvis_voice_launch_token"]);
+});
+
+test("desktop consent is explicit and session-only; application output rejects pending and stale epochs", async (t) => {
+  const h = harness(t);
+  await flush();
+  assert.equal(h.el("desktop-enabled").checked, false);
+  assert(h.record.controls.filter((item) => item.type === "settings").every((item) => item.desktop_enabled === false));
+  h.socket.deliver({ type: "settings", desktop_enabled: true });
+  assert.equal(h.el("desktop-enabled").checked, false, "server ACK cannot supply user consent");
+  h.el("desktop-enabled").checked = true;
+  await h.el("desktop-enabled").fire("change");
+  assert.equal(h.record.controls.filter((item) => item.type === "settings").at(-1).desktop_enabled, true);
+  assert.equal(h.record.controls.filter((item) => item.type === "apps_get").length, 1);
+  assert.equal(h.record.tracks.length, 0);
+  h.socket.deliver({ type: "apps", items: [{ id: "calculator", label: "<img src=x onerror=alert(1)>", available: true }] });
+  assert.equal(h.el("apps-list").children[0].textContent, "<img src=x onerror=alert(1)> · hazır");
+  assert.equal(h.el("apps-list").children[0].children.length, 0);
+  const result = { type: "application", epoch: h.epoch, app_id: "calculator", label: "Hesap Makinesi", status: "requested", message: "<b>Başlatma isteği gönderildi.</b>" };
+  h.socket.deliver(result);
+  assert.equal(h.el("application-result").textContent, result.message);
+  assert.equal(h.el("application-result").children.length, 0);
+  const previousEpoch = h.epoch;
+  h.socket.deferEpochs = true;
+  await h.el("interrupt").fire("click");
+  h.socket.deliver({ ...result, message: "Pending result" });
+  h.unsolicitedEpoch();
+  h.socket.deliver({ ...result, epoch: h.epoch, message: "Unsolicited epoch result" });
+  assert.equal(h.el("application-result").textContent, result.message);
+  h.socket.acknowledge(h.socket.deferredControls.shift());
+  h.socket.deliver({ ...result, epoch: previousEpoch, message: "Stale result" });
+  assert.equal(h.el("application-result").textContent, result.message);
+  h.el("desktop-enabled").checked = false;
+  await h.el("desktop-enabled").fire("change");
+  h.socket.deliver({ type: "settings", desktop_enabled: true });
+  h.socket.deliver({ ...result, epoch: h.epoch });
+  assert.equal(h.el("desktop-enabled").checked, false);
+  assert.equal(h.el("application-result").hidden, true);
+  assert.equal(h.el("apps-list").children.length, 0);
+  assert.deepEqual([...h.storage.keys()], ["jarvis_voice_launch_token"]);
+});
+
+test("plan drafts and saved plans render as text and never save themselves", async (t) => {
+  const h = harness(t);
+  await flush();
+  const draft = planSample("a".repeat(32), "<svg onload=alert(1)>");
+  draft.steps[0].text = "<img src=x onerror=alert(1)>";
+  draft.assumptions[0] = "<script>unsafe()</script>";
+  const saved = planSample("b".repeat(32), "Kayıtlı çalışma planı");
+  h.setPlans(draft, saved);
+  assert.equal(h.el("plan-draft").hidden, false);
+  assert.equal(h.el("plan-saved").hidden, false);
+  assert.equal(h.el("plan-draft-title").textContent, draft.title);
+  assert.equal(h.el("plan-draft-title").children.length, 0);
+  assert.equal(h.el("plan-draft-steps").children[0].children[0].textContent, draft.steps[0].text);
+  assert.equal(h.el("plan-draft-steps").children[0].children[0].children.length, 0);
+  assert.equal(h.el("plan-draft-steps").children[0].children[1].textContent, "Yaklaşık 10 dakika");
+  assert.equal(h.el("plan-draft-steps").children[1].children.length, 1, "unknown duration is not invented");
+  assert.equal(h.el("plan-draft-assumptions").children[0].textContent, draft.assumptions[0]);
+  assert.equal(h.el("plan-draft-assumptions").children[0].children.length, 0);
+  assert.equal(h.el("plan-saved-title").textContent, saved.title);
+  assert.equal(h.record.controls.some((item) => ["plan_save", "plan_discard", "plan_delete"].includes(item.type)), false);
+  h.socket.deliver({ type: "plan", epoch: h.epoch, draft: { ...draft, schema_version: 99 }, saved: null });
+  assert.equal(h.el("plan-saved-title").textContent, saved.title, "unknown schema cannot replace visible canonical state");
+  assert.equal(h.record.tracks.length, 0);
+  assert.deepEqual([...h.storage.keys()], ["jarvis_voice_launch_token"]);
+});
+
+test("plan mutations send current IDs once, await their own epoch ACK, and require explicit deletion", async (t) => {
+  const h = harness(t);
+  await flush();
+  const draft = planSample();
+  const saved = planSample("b".repeat(32), "Önceki plan");
+  h.setPlans(draft, saved);
+  h.socket.deferEpochs = true;
+  await h.el("plan-save").fire("click");
+  const save = h.record.controls.find((item) => item.type === "plan_save");
+  assert.deepEqual(Object.keys(save).sort(), ["draft_id", "request_id", "type"]);
+  assert.equal(save.draft_id, draft.id);
+  assert.equal(typeof save.request_id, "string");
+  assert.equal(h.el("plan-save").disabled, true);
+  await h.el("plan-save").fire("click");
+  assert.equal(h.record.controls.filter((item) => item.type === "plan_save").length, 1);
+  h.socket.deliver({ type: "plan", epoch: h.epoch, draft: null, saved: null });
+  h.unsolicitedEpoch();
+  h.socket.deliver({ type: "plan", epoch: h.epoch, draft: null, saved: null });
+  assert.equal(h.el("plan-draft").hidden, false);
+  assert.equal(h.el("plan-saved-title").textContent, saved.title);
+  h.socket.acknowledge(h.socket.deferredControls.shift());
+  assert.equal(h.el("plan-draft").hidden, true);
+  assert.equal(h.el("plan-saved-title").textContent, draft.title);
+  h.socket.deferEpochs = false;
+  const anotherDraft = planSample("c".repeat(32), "Başka taslak");
+  h.setPlans(anotherDraft, draft);
+  await h.el("plan-discard").fire("click");
+  assert.equal(h.record.controls.find((item) => item.type === "plan_discard").draft_id, anotherDraft.id);
+  assert.equal(h.el("plan-draft").hidden, true);
+  assert.equal(h.el("plan-saved-title").textContent, draft.title);
+  h.confirm(false);
+  await h.el("plan-delete").fire("click");
+  assert.equal(h.record.controls.some((item) => item.type === "plan_delete"), false);
+  h.confirm(true);
+  await h.el("plan-delete").fire("click");
+  const deletion = h.record.controls.find((item) => item.type === "plan_delete");
+  assert.deepEqual(Object.keys(deletion).sort(), ["plan_id", "request_id", "type"]);
+  assert.equal(deletion.plan_id, draft.id);
+  assert.equal(h.el("plan-saved").hidden, true);
+  assert.equal(h.record.confirmations.length, 2);
+  assert.equal(h.record.tracks.length, 0);
+  assert.equal(h.record.contexts.length, 0);
+});
+
+test("stopping the microphone preserves plans; reconnect clears drafts and rereads saved state", async (t) => {
+  const h = harness(t);
+  await h.start();
+  const draft = planSample();
+  const saved = planSample("b".repeat(32), "Kalıcı plan");
+  h.setPlans(draft, saved);
+  const oldEpoch = h.epoch;
+  await h.el("voice-toggle").fire("click");
+  assert.equal(h.el("plan-draft").hidden, false);
+  assert.equal(h.el("plan-saved-title").textContent, saved.title);
+  h.socket.deliver({ type: "plan", epoch: oldEpoch, draft: null, saved: null });
+  assert.equal(h.el("plan-draft").hidden, false);
+  h.el("desktop-enabled").checked = true;
+  await h.el("desktop-enabled").fire("change");
+  const oldSocket = h.socket;
+  oldSocket.close(1000);
+  assert.equal(h.el("plan-draft").hidden, true);
+  assert.equal(h.el("plan-saved").hidden, true);
+  assert.equal(h.el("desktop-enabled").checked, false);
+  oldSocket.deliver({ type: "plan", epoch: h.epoch, draft, saved });
+  assert.equal(h.el("plan-draft").hidden, true);
+  h.clock.advance(1000);
+  await flush();
+  assert.equal(h.record.controls.filter((item) => item.type === "plan_get").length, 2);
+  assert.equal(h.el("plan-draft").hidden, true);
+  assert.equal(h.el("plan-saved-title").textContent, saved.title);
+  assert.equal(h.el("desktop-enabled").checked, false);
+  assert.equal(h.record.controls.filter((item) => item.type === "settings").at(-1).desktop_enabled, false);
+  assert.equal(h.record.tracks.length, 1, "reconnect must not reopen capture");
+  assert.equal(h.record.tracks[0].readyState, "ended");
+});
+
+test("muting spoken replies stops late audio while explicitly started guidance can still speak", async (t) => {
+  const h = harness(t);
+  await h.start();
+  h.socket.audio("normal-before-mute");
+  const oldEpoch = h.epoch;
+  h.socket.deferEpochs = true;
+  h.el("speech-enabled").checked = false;
+  await h.el("speech-enabled").fire("change");
+  assert.equal(h.record.sources[0].stopped, true);
+  assert.equal(h.record.tracks[0].readyState, "live", "speech preference does not change microphone consent");
+  h.socket.audio("late-normal-before-ack", oldEpoch);
+  h.unsolicitedEpoch();
+  h.socket.audio("late-unsolicited-normal");
+  assert.equal(h.record.sources.length, 1);
+  h.socket.acknowledge(h.socket.deferredControls.shift());
+  h.socket.deliver({ type: "settings", speech_enabled: true });
+  assert.equal(h.el("speech-enabled").checked, false, "late ACK cannot restore a muted preference");
+  h.socket.audio("normal-after-ack");
+  assert.equal(h.record.sources.length, 1);
+  h.socket.deferEpochs = false;
+  await h.el("onboarding-start").fire("click");
+  h.socket.deliver({ type: "onboarding", epoch: h.epoch, active: false, stage: "complete", message: "Tercihlerin hazır." });
+  h.socket.deliver({ type: "audio", epoch: h.epoch, segment_id: "guided-completion", sample_rate: 24000,
+    guided: true, pcm: Buffer.alloc(4800).toString("base64"), text: "Tercihlerin hazır." });
+  assert.equal(h.record.sources.length, 2, "last guidance sentence can play after guided state becomes inactive");
+  h.socket.audio("normal-after-guidance");
+  assert.equal(h.record.sources.length, 2);
+  h.el("speech-enabled").checked = true;
+  await h.el("speech-enabled").fire("change");
+  h.socket.audio("normal-after-unmuting");
+  assert.equal(h.record.sources.length, 3, "unmuting an active microphone session restores spoken replies");
+  assert.equal(h.record.tracks.length, 1);
 });

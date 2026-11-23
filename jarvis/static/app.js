@@ -35,6 +35,15 @@
     acousticsDetails: $("acoustics-details"), acousticsStatus: $("acoustics-status"),
     acousticsMeasurements: $("acoustics-measurements"), captureMeasurements: $("capture-measurements"),
     acousticsLimitations: $("acoustics-limitations"),
+    modelLabel: $("model-label"), speechEnabled: $("speech-enabled"),
+    desktopEnabled: $("desktop-enabled"), appsPanel: $("apps-panel"),
+    appsList: $("apps-list"), applicationResult: $("application-result"),
+    plansDetails: $("plans-details"), planStatus: $("plan-status"), planRefresh: $("plan-refresh"),
+    planDraft: $("plan-draft"), planDraftTitle: $("plan-draft-title"),
+    planDraftSteps: $("plan-draft-steps"), planDraftAssumptions: $("plan-draft-assumptions"),
+    planSaved: $("plan-saved"), planSavedTitle: $("plan-saved-title"),
+    planSavedSteps: $("plan-saved-steps"), planSavedAssumptions: $("plan-saved-assumptions"),
+    planSave: $("plan-save"), planDiscard: $("plan-discard"), planDelete: $("plan-delete"),
   };
 
   const hash = new URLSearchParams(window.location.hash.slice(1));
@@ -68,6 +77,8 @@
     guidedPending: null,
     calibrationCanApply: false,
     captureInfo: null,
+    desktopConsent: false, speechRequested: true,
+    planDraft: null, planSaved: null, planReadRequested: false,
   };
 
   const MAX_AUDIO_BYTES = 4 * 1024 * 1024;
@@ -136,11 +147,18 @@
     ui.saveProfile.disabled = !state.connected || !state.ready || state.profilePending;
     ui.guidedCancel.disabled = !state.connected;
     ui.calibrationApply.disabled = !state.connected || !state.ready || !state.calibrationCanApply;
+    ui.desktopEnabled.disabled = !state.connected || !state.ready;
+    ui.speechEnabled.disabled = !state.connected;
+    const planControlsBlocked = !state.connected || !state.ready || state.pendingEpochRequest !== null;
+    ui.planRefresh.disabled = planControlsBlocked;
+    ui.planSave.disabled = planControlsBlocked || !state.planDraft;
+    ui.planDiscard.disabled = planControlsBlocked || !state.planDraft;
+    ui.planDelete.disabled = planControlsBlocked || !state.planSaved;
     ui.onboardingStart.textContent = state.profile.onboarding_complete ? "Sesli tanışmayı yenile" : "Sesli tanışmayı başlat";
 
     const playing = state.playbacks.size > 0;
     let title = "Seni dinlemeye hazırım.";
-    let subtitle = "Bir kez başlat, sonra doğal şekilde konuş.";
+    let subtitle = "Yazabilir veya mikrofonu açıp konuşabilirsin.";
     let mode = "idle";
     if (!state.connected) {
       title = state.phase === "connecting" ? "Birazdan hazır." : "Bağlantı bekleniyor.";
@@ -151,7 +169,7 @@
       mode = "thinking";
     } else if (state.starting) {
       title = "Mikrofonunu açalım.";
-      subtitle = "Tarayıcı sorarsa mikrofon iznini ver.";
+      subtitle = "İzin penceresi açılırsa mikrofon erişimini onayla.";
     } else if (playing) {
       title = "Seninle konuşuyor.";
       subtitle = ui.bargeIn.checked ? "Araya girebilir veya sesi kesebilirsin." : "İstersen “Sesi kes” düğmesiyle araya gir.";
@@ -184,13 +202,13 @@
     const dot = document.createElement("span");
     dot.setAttribute("aria-hidden", "true");
     ui.micIndicator.append(dot, document.createTextNode(state.micActive ? (state.captureEnabled ? "Mikrofon açık" : "Yanıtı dinliyorsun") : "Mikrofon kapalı"));
-    ui.footerHint.textContent = state.micActive ? "Dilediğinde mikrofonu kapatabilirsin." : "Başlamak için mikrofon izni gerekir.";
+    ui.footerHint.textContent = state.micActive ? "Dilediğinde mikrofonu kapatabilirsin." : "Yazabilir veya mikrofonu açabilirsin.";
     renderGuided();
   }
 
   async function ensureAudioContext() {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) throw new Error("Bu tarayıcı sesli sohbeti desteklemiyor. Güncel Chrome veya Edge ile açabilirsin.");
+    if (!AudioContextClass) throw new Error("Bu pencerede sesli sohbet kullanılamıyor. Sesli yanıtı kapatıp yazabilir veya Jarvis’i yeniden açabilirsin.");
     if (!state.context || state.context.state === "closed") {
       state.context = new AudioContextClass({ latencyHint: "interactive" });
       state.workletLoaded = false;
@@ -202,7 +220,7 @@
 
   function microphoneError(error) {
     if (error && ["NotAllowedError", "PermissionDeniedError"].includes(error.name)) {
-      return "Mikrofon izni verilmedi. Adres çubuğundaki site izinlerinden mikrofonu açıp tekrar deneyebilirsin.";
+      return "Mikrofon izni verilmedi. Windows mikrofon izinlerini kontrol edip Jarvis’i yeniden açabilirsin.";
     }
     if (error && ["NotFoundError", "DevicesNotFoundError"].includes(error.name)) {
       return "Mikrofon bulunamadı. Mikrofonunu bağla ve Windows ses giriş ayarını kontrol et.";
@@ -210,7 +228,7 @@
     if (error && ["NotReadableError", "TrackStartError"].includes(error.name)) {
       return "Mikrofon açılamadı. Başka bir uygulama kullanıyorsa kapatıp yeniden dene; Windows mikrofon iznini de kontrol edebilirsin.";
     }
-    return error && error.message ? error.message : "Mikrofon açılamadı. Güncel Chrome veya Edge ile tekrar deneyebilirsin.";
+    return error && error.message ? error.message : "Mikrofon açılamadı. Jarvis’i yeniden açıp tekrar deneyebilirsin.";
   }
 
   function releaseMicrophone() {
@@ -246,7 +264,7 @@
     try {
       const context = await ensureAudioContext();
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !context.audioWorklet) {
-        throw new Error("Bu pencerede mikrofona erişilemiyor. Uygulamayı başlatıcısından, güncel Chrome veya Edge ile aç.");
+        throw new Error("Bu pencerede mikrofona erişilemiyor. Windows mikrofon izinlerini kontrol edip Jarvis’i başlatıcısından yeniden aç.");
       }
       stream = await navigator.mediaDevices.getUserMedia({
         audio: { channelCount: { ideal: 1 }, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -257,7 +275,7 @@
         return;
       }
       if (!state.workletLoaded) {
-        await context.audioWorklet.addModule("/static/capture-worklet.js?v=0.2.0");
+        await context.audioWorklet.addModule("/static/capture-worklet.js?v=0.3.0");
         state.workletLoaded = true;
       }
       if (request !== state.startRequest || !state.connected) {
@@ -376,6 +394,7 @@
 
   function receiveAudio(message) {
     if (!state.connected || !state.playbackAllowed || state.blockAudioUntilEpoch || message.epoch !== state.epoch) return;
+    if (!ui.speechEnabled.checked && message.guided !== true) return;
     const sampleRate = Number(message.sample_rate);
     if (!Number.isFinite(sampleRate) || sampleRate < 8000 || sampleRate > 96000 || typeof message.pcm !== "string") return;
     if (message.segment_id === undefined || message.segment_id === null) return;
@@ -496,6 +515,123 @@
     ui.memoryPanel.hidden = ui.memoryList.childElementCount === 0;
   }
 
+  function currentTurnEvent(message) {
+    return state.connected && state.pendingEpochRequest === null
+      && Number.isInteger(message.epoch) && message.epoch === state.epoch;
+  }
+
+  function clearApplications() {
+    ui.appsPanel.hidden = true;
+    ui.appsList.replaceChildren();
+    ui.applicationResult.hidden = true;
+    ui.applicationResult.textContent = "";
+  }
+
+  function receiveApps(message) {
+    if (!state.connected || !ui.desktopEnabled.checked || !state.desktopConsent || state.pendingEpochRequest !== null) return;
+    if (Number.isInteger(message.epoch) && message.epoch !== state.epoch) return;
+    ui.appsList.replaceChildren();
+    const items = Array.isArray(message.items) ? message.items.slice(0, 16) : [];
+    for (const item of items) {
+      if (!item || typeof item.label !== "string" || typeof item.available !== "boolean") continue;
+      const row = document.createElement("li");
+      row.textContent = item.label.slice(0, 100) + (item.available ? " · hazır" : " · bulunamadı");
+      ui.appsList.appendChild(row);
+    }
+    ui.appsPanel.hidden = ui.appsList.childElementCount === 0;
+  }
+
+  function receiveApplication(message) {
+    if (!currentTurnEvent(message) || !ui.desktopEnabled.checked || !state.desktopConsent) return;
+    if (typeof message.message !== "string") return;
+    ui.applicationResult.textContent = message.message.slice(0, 600);
+    ui.applicationResult.hidden = false;
+  }
+
+  function planValue(value) {
+    if (value === null) return null;
+    if (!value || typeof value !== "object" || value.schema_version !== 1
+      || typeof value.id !== "string" || !/^[A-Za-z0-9_-]{1,96}$/.test(value.id)
+      || typeof value.title !== "string" || !value.title.trim()
+      || !Array.isArray(value.steps) || !value.steps.length || value.steps.length > 20) return undefined;
+    const steps = [];
+    for (const step of value.steps) {
+      if (!step || typeof step.text !== "string" || !step.text.trim()) return undefined;
+      steps.push({ text: step.text.slice(0, 1200), minutes: finiteNumber(step.minutes) && step.minutes > 0 && step.minutes <= 1440 ? step.minutes : null });
+    }
+    const assumptions = Array.isArray(value.assumptions)
+      ? value.assumptions.filter((item) => typeof item === "string").slice(0, 12).map((item) => item.slice(0, 600)) : [];
+    return { id: value.id, title: value.title.slice(0, 240), steps, assumptions };
+  }
+
+  function showPlan(plan, card, title, steps, assumptions) {
+    card.hidden = !plan;
+    title.textContent = plan ? plan.title : "";
+    steps.replaceChildren();
+    assumptions.replaceChildren();
+    if (!plan) return;
+    for (const step of plan.steps) {
+      const row = document.createElement("li");
+      const text = document.createElement("span");
+      text.textContent = step.text;
+      row.appendChild(text);
+      if (step.minutes !== null) {
+        const duration = document.createElement("small");
+        duration.className = "plan-step-time";
+        duration.textContent = `Yaklaşık ${numberText(step.minutes)} dakika`;
+        row.appendChild(duration);
+      }
+      steps.appendChild(row);
+    }
+    for (const text of plan.assumptions) {
+      const row = document.createElement("li");
+      row.textContent = text;
+      assumptions.appendChild(row);
+    }
+  }
+
+  function renderPlans() {
+    showPlan(state.planDraft, ui.planDraft, ui.planDraftTitle, ui.planDraftSteps, ui.planDraftAssumptions);
+    showPlan(state.planSaved, ui.planSaved, ui.planSavedTitle, ui.planSavedSteps, ui.planSavedAssumptions);
+    ui.planStatus.textContent = state.planDraft ? "Taslağı inceleyip kaydedebilirsin. Yeni kayıt mevcut planın yerini alır."
+      : state.planSaved ? "Kayıtlı planın bu bilgisayarda tutuluyor." : "Henüz kayıtlı bir plan veya taslak yok.";
+  }
+
+  function receivePlan(message) {
+    if (!currentTurnEvent(message)) return;
+    const draft = planValue(message.draft);
+    const saved = planValue(message.saved);
+    if (draft === undefined || saved === undefined) return;
+    const isNewDraft = draft && (!state.planDraft || state.planDraft.id !== draft.id);
+    state.planDraft = draft;
+    state.planSaved = saved;
+    renderPlans();
+    if (isNewDraft) ui.plansDetails.open = true;
+  }
+
+  function getPlans() {
+    if (!state.connected || !state.ready || state.pendingEpochRequest !== null) return false;
+    return send({ type: "plan_get" });
+  }
+
+  function requestInitialPlans() {
+    if (!state.planReadRequested && state.connected && state.ready) state.planReadRequested = getPlans();
+  }
+
+  function mutatePlan(type) {
+    if (!state.connected || !state.ready || state.pendingEpochRequest !== null) return;
+    const plan = type === "plan_delete" ? state.planSaved : state.planDraft;
+    if (!plan) return;
+    if (type === "plan_delete" && !window.confirm("Bu bilgisayardaki kayıtlı plan silinsin mi?")) return;
+    const fields = type === "plan_delete" ? { plan_id: plan.id } : { draft_id: plan.id };
+    state.blockAudioUntilEpoch = true;
+    stopAllAudio(true);
+    sendEpochControl(type, fields);
+    state.phase = state.micActive ? "listening" : "ready";
+    ui.planStatus.textContent = type === "plan_save" ? "Plan kaydediliyor…" : "Plan bilgisi güncelleniyor…";
+    render();
+  }
+
   const PROFILE_LABELS = {
     style: { friendly: "samimi", balanced: "dengeli", formal: "resmî" },
     verbosity: { short: "kısa yanıtlar", medium: "orta uzunlukta yanıtlar", detailed: "ayrıntılı yanıtlar" },
@@ -533,9 +669,9 @@
     profile.onboarding_complete = incoming.onboarding_complete === true;
     state.profile = profile;
     ui.brandName.textContent = profile.assistant_name;
-    $("brand-link").setAttribute("aria-label", `${profile.assistant_name} sesli sohbet`);
-    document.title = `${profile.assistant_name} · Sesli sohbet`;
-    $("transcript-hint").textContent = `Söylediklerin ve ${profile.assistant_name} yanıtları bu pencerede görünür.`;
+    $("brand-link").setAttribute("aria-label", `${profile.assistant_name} yerel yardımcı`);
+    document.title = `${profile.assistant_name} · Yerel yardımcı`;
+    $("transcript-hint").textContent = `Söylediklerin, yazdıkların ve ${profile.assistant_name} yanıtları bu pencerede görünür.`;
     ui.profileSummary.textContent = profile.onboarding_complete
       ? `${profile.assistant_name}${profile.user_name ? ` · ${profile.user_name}` : ""} · ${PROFILE_LABELS.style[profile.style]} sohbet · ${PROFILE_LABELS.verbosity[profile.verbosity]}.`
       : "İlk konuşmada adını, bana vereceğin ismi ve sohbet tarzını birlikte seçebiliriz.";
@@ -808,14 +944,26 @@
         state.ready = message.ready === true;
         state.reconnectCount = 0;
         state.phase = state.ready ? "ready" : "loading";
+        state.desktopConsent = false;
+        ui.desktopEnabled.checked = false;
+        state.planReadRequested = false;
+        state.planDraft = null;
+        state.planSaved = null;
+        clearApplications();
+        renderPlans();
+        if (typeof message.model === "string" && message.model.trim()) {
+          ui.modelLabel.textContent = `${message.endpoint === "local" ? "Yerel model" : "Model"} · ${message.model.slice(0, 100)}`;
+        }
         receiveEpoch(message.epoch);
         sendSettings();
+        requestInitialPlans();
         break;
       case "ready":
         state.ready = message.ready !== false;
         state.phase = state.ready ? (state.micActive ? "listening" : "ready") : "loading";
         if (!state.ready && typeof message.message === "string" && !message.message.includes("açılıyor")) showNotice(message.message);
         syncCaptureGate();
+        requestInitialPlans();
         break;
       case "epoch": receiveEpoch(message.epoch, message.request_id); break;
       case "status": receiveStatus(message); break;
@@ -830,6 +978,9 @@
       case "transcript": receiveTranscript(message); break;
       case "sources": receiveSources(message); break;
       case "memories": receiveMemories(message); break;
+      case "apps": receiveApps(message); break;
+      case "application": receiveApplication(message); break;
+      case "plan": receivePlan(message); break;
       case "profile": receiveProfile(message); break;
       case "onboarding": receiveOnboarding(message); break;
       case "calibration": receiveCalibration(message); break;
@@ -842,6 +993,14 @@
       case "settings_saved":
         if (typeof message.web_enabled === "boolean") ui.webEnabled.checked = message.web_enabled;
         if (typeof message.barge_in === "boolean") ui.bargeIn.checked = message.barge_in;
+        if (typeof message.desktop_enabled === "boolean") {
+          // A late server ACK cannot grant consent after the user switched off.
+          ui.desktopEnabled.checked = state.desktopConsent && message.desktop_enabled;
+          if (!ui.desktopEnabled.checked) clearApplications();
+        }
+        if (typeof message.speech_enabled === "boolean") {
+          ui.speechEnabled.checked = state.speechRequested && message.speech_enabled;
+        }
         if (typeof message.acoustic_enabled === "boolean") {
           ui.acousticEnabled.checked = message.acoustic_enabled;
           if (!message.acoustic_enabled) clearAcoustics();
@@ -872,7 +1031,7 @@
   }
 
   function sendSettings(apiKey) {
-    const message = { type: "settings", web_enabled: ui.webEnabled.checked, barge_in: ui.bargeIn.checked, acoustic_enabled: ui.acousticEnabled.checked };
+    const message = { type: "settings", web_enabled: ui.webEnabled.checked, barge_in: ui.bargeIn.checked, acoustic_enabled: ui.acousticEnabled.checked, desktop_enabled: state.desktopConsent, speech_enabled: state.speechRequested };
     if (apiKey !== undefined) message.api_key = apiKey;
     return send(message);
   }
@@ -887,7 +1046,7 @@
     state.socket = socket;
     socket.onopen = () => {
       if (state.socket !== socket) return;
-      socket.send(JSON.stringify({ type: "hello", token: launchToken, protocol: 2 }));
+      socket.send(JSON.stringify({ type: "hello", token: launchToken, protocol: 3 }));
     };
     socket.onmessage = (event) => { if (state.socket === socket) onServerMessage(event); };
     socket.onerror = () => { /* onclose performs cleanup and the bounded retry. */ };
@@ -902,6 +1061,15 @@
       state.calibrationCanApply = false;
       ui.calibrationApply.hidden = true;
       ui.acousticEnabled.checked = false;
+      state.desktopConsent = false;
+      ui.desktopEnabled.checked = false;
+      clearApplications();
+      state.planReadRequested = false;
+      state.planDraft = null;
+      state.planSaved = null;
+      renderPlans();
+      ui.planStatus.textContent = "Bağlantı kurulduğunda kayıtlı plan yeniden okunacak.";
+      ui.modelLabel.textContent = "Yerel model bağlantısı bekleniyor";
       clearAcoustics();
       state.socket = null;
       stopSession(false);
@@ -909,7 +1077,7 @@
       render();
       if (state.closing) return;
       if ([1008, 4003, 4401, 4403].includes(event.code)) {
-        if (!ui.noticeText.textContent.includes("başka bir sekmede")) {
+        if (!ui.noticeText.textContent.includes("başka bir pencerede")) {
           try { window.sessionStorage.removeItem(tokenStorageKey); } catch (_) { /* Storage can be disabled. */ }
           showNotice("Bu pencerenin oturumu açılamadı. Uygulamanın başlatıcısından yeni bir pencere açabilirsin.");
         }
@@ -989,6 +1157,34 @@
     clearAcoustics();
     sendSettings();
   });
+  ui.desktopEnabled.addEventListener("change", () => {
+    if (!state.connected || !state.ready) {
+      ui.desktopEnabled.checked = false;
+      return;
+    }
+    state.desktopConsent = ui.desktopEnabled.checked;
+    clearApplications();
+    sendSettings();
+    if (state.desktopConsent) send({ type: "apps_get" });
+  });
+  ui.speechEnabled.addEventListener("change", () => {
+    state.speechRequested = ui.speechEnabled.checked;
+    const guided = state.onboarding.active || state.calibration.active || state.guidedPending !== null;
+    if (state.speechRequested && state.micActive) state.playbackAllowed = true;
+    if (!state.speechRequested && !guided && state.connected) {
+      state.playbackAllowed = false;
+      state.blockAudioUntilEpoch = true;
+      stopAllAudio(true);
+      // Matching ACK keeps late audio from an earlier spoken response closed.
+      sendEpochControl("interrupt");
+    }
+    sendSettings();
+    render();
+  });
+  ui.planRefresh.addEventListener("click", () => { getPlans(); });
+  ui.planSave.addEventListener("click", () => { mutatePlan("plan_save"); });
+  ui.planDiscard.addEventListener("click", () => { mutatePlan("plan_discard"); });
+  ui.planDelete.addEventListener("click", () => { mutatePlan("plan_delete"); });
   $("api-key-form").addEventListener("submit", (event) => {
     event.preventDefault();
     if (!state.connected) { showNotice("Önce Jarvis bağlantısının kurulmasını bekle."); return; }
@@ -1006,8 +1202,9 @@
     const text = ui.textInput.value.trim();
     if (!text || !state.connected || !state.ready) return;
     try {
-      await ensureAudioContext();
-      state.playbackAllowed = true;
+      const guided = state.onboarding.active || state.calibration.active || state.guidedPending !== null;
+      if (ui.speechEnabled.checked || guided) await ensureAudioContext();
+      state.playbackAllowed = ui.speechEnabled.checked || guided;
       // The server advances its authoritative epoch for a new text turn.
       state.blockAudioUntilEpoch = true;
       stopAllAudio(true);

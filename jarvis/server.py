@@ -25,6 +25,8 @@ from .profile import Profile, ProfileStore, ProfileError, Onboarding
 from .calibration import (CalibrationStore, CalibrationError, NoiseMeter,
                           NOISE_PROMPT, PHRASE_PROMPT, evaluate, segment_settings, words)
 from .audio_analysis import analyze, sanitize_capture
+from .actions import application_command, apps_catalog, launch_application
+from .plans import PlanError, PlanStore, plan_command
 from . import llm, __version__
 
 
@@ -73,6 +75,7 @@ class Runtime:
         self.profile = Profile()
         self.profile_store = ProfileStore(DATA_ROOT / "profile.json")
         self.calibration_store = CalibrationStore(DATA_ROOT / "audio_calibration.json")
+        self.plan_store = PlanStore(DATA_ROOT / "plan.json")
         self.vad_threshold = SETTINGS.vad_threshold
         self.ollama_client = None
         self.prompt_cache = OrderedDict()
@@ -177,6 +180,14 @@ class Session:
         self.web_enabled = False
         self.barge_in = False
         self.acoustic_enabled = False
+        self.desktop_enabled = False
+        self.speech_enabled = True
+        self.plan_store = getattr(runtime, "plan_store", PlanStore(DATA_ROOT / "plan.json"))
+        self.plan_draft = None
+        self.plan_draft_deadline = 0.0
+        self.application_times = deque()
+        self.effect_epochs = deque(maxlen=SETTINGS.control_id_cache_size)
+        self.control_ids = OrderedDict()
         self.capture_info = sanitize_capture(None)
         self.pending = {}
         self.closed = False
@@ -211,6 +222,111 @@ class Session:
 
     async def send_profile(self):
         await self.send(event("profile", profile=self.profile.to_dict(), onboarding={"active": self.onboarding.active, "stage": self.onboarding.stage}))
+
+    def current_draft(self):
+        if self.plan_draft is not None and time.monotonic() >= self.plan_draft_deadline:
+            self.plan_draft = None
+        return self.plan_draft
+
+    async def send_plan_state(self, epoch=None):
+        epoch = self.gate.epoch if epoch is None else epoch
+        saved = self.plan_store.load()
+        draft = self.current_draft()
+        if not self.closed and self.gate.epoch == epoch:
+            await self.send(event("plan", epoch=epoch, draft=draft.to_dict() if draft else None,
+                                  saved=saved.to_dict() if saved else None))
+
+    def saved_plan_for_context(self):
+        try:
+            return self.plan_store.load()
+        except PlanError:
+            # A bad plan is never reset or silently replaced. Normal chat can
+            # still run without it; plan_get reports the actionable error.
+            return None
+
+    def apply_plan(self, kind, epoch, identifier=None):
+        """Commit only explicit current-user actions, without an intervening await."""
+        if self.closed or self.gate.epoch != epoch:
+            raise asyncio.CancelledError
+        if kind in {"save", "discard"}:
+            draft = self.current_draft()
+            if draft is None or (identifier is not None and identifier != draft.id):
+                raise PlanError("Güncel bir plan taslağı yok veya taslağın süresi doldu. Yeniden plan oluştur.")
+            if kind == "save":
+                self.plan_store.save(draft)
+                message = "Planını bu bilgisayara kaydettim. Planımı göster diyerek yeniden açabilirsin."
+            else:
+                message = "Plan taslağını kaldırdım. Kayıtlı planın korundu."
+            self.plan_draft = None
+            return message
+        saved = self.plan_store.load()
+        if identifier is not None and (saved is None or identifier != saved.id):
+            raise PlanError("Kayıtlı plan değişmiş. Güncel planı açıp yeniden dene.")
+        self.plan_store.delete()
+        return "Kayıtlı planını sildim." if saved else "Kayıtlı bir planın yok."
+
+    async def local_command(self, text, epoch, history):
+        """This router receives direct user input only, never model/web content."""
+        app_id = application_command(text, self.profile.assistant_name)
+        if app_id is not None:
+            if not self.gate.accepts(epoch) or self.closed:
+                raise asyncio.CancelledError
+            if app_id == "unsupported":
+                return "Şimdilik Hesap Makinesi, Not Defteri, Dosya Gezgini ve Paint için açma komutunu destekliyorum."
+            if not self.desktop_enabled:
+                return "Uygulama açma izni kapalı. Ayarlardan Bilgisayarda uygulama açma seçeneğini açabilirsin."
+            if self.runtime.demo:
+                return "Görsel test modunda uygulama başlatılmaz."
+            now = time.monotonic()
+            while self.application_times and self.application_times[0] <= now - 60:
+                self.application_times.popleft()
+            if epoch in self.effect_epochs:
+                return "Bu açma isteğini zaten işledim."
+            if (len(self.application_times) >= SETTINGS.desktop_limit_per_minute
+                    or (self.application_times and now - self.application_times[-1] < SETTINGS.desktop_min_interval_s)):
+                return "Uygulama açma istekleri çok sık geldi. Biraz bekleyip yeniden söyle."
+            # No await between authority checks, consumption and Popen. Stop
+            # cannot undo a process already launched; it cancels future work.
+            self.effect_epochs.append(epoch)
+            self.application_times.append(now)
+            result = launch_application(app_id)
+            await self.send(event("application", epoch=epoch, app_id=result.app_id, label=result.label,
+                                  status=result.status, message=result.message))
+            return result.message
+        command = plan_command(text)
+        if command is None:
+            return None
+        if not self.gate.accepts(epoch) or self.closed:
+            raise asyncio.CancelledError
+        kind, goal = command
+        if kind == "create":
+            if not goal:
+                return "Hangi hedef için plan hazırlayayım? Örneğin Plan oluştur: her akşam yarım saat Python öğrenmek istiyorum diyebilirsin."
+            if self.runtime.demo:
+                return "Görsel test modunda model bağlı değil; gerçek plan üretimi normal başlatmada çalışır."
+            self.plan_draft = None
+            await self.send_plan_state(epoch)
+            await self.status("Tercihlerin ve kaydettiğin notlarla plan taslağını hazırlıyorum…")
+            if not self.gate.accepts(epoch):
+                raise asyncio.CancelledError
+            draft = await llm.make_plan(goal, history, self.memory.list(), profile=self.profile,
+                                       client=getattr(self.runtime, "ollama_client", None))
+            if not self.gate.accepts(epoch) or self.closed:
+                raise asyncio.CancelledError
+            self.plan_draft = draft
+            self.plan_draft_deadline = time.monotonic() + SETTINGS.plan_draft_ttl_s
+            await self.send_plan_state(epoch)
+            return draft.spoken() + " Kaydetmemi istersen planı kaydet diyebilirsin."
+        if kind == "show":
+            draft = self.current_draft()
+            saved = self.plan_store.load()
+            await self.send_plan_state(epoch)
+            if draft:
+                return "Henüz kaydedilmemiş taslağın: " + draft.spoken()
+            return saved.spoken() if saved else "Henüz kayıtlı bir planın yok. Plan oluştur diyerek hedefini söyleyebilirsin."
+        message = self.apply_plan(kind, epoch)
+        await self.send_plan_state(epoch)
+        return message
 
     async def send_onboarding(self, reply):
         await self.send(event("onboarding", epoch=self.gate.epoch, active=self.onboarding.active,
@@ -303,6 +419,7 @@ class Session:
                 item["ack"].cancel()
         self.pending.clear()
         await self.send(event("epoch", epoch=epoch, request_id=request_id))
+        return epoch
 
     def allowed_turn(self):
         now = time.monotonic()
@@ -373,6 +490,14 @@ class Session:
         request_id = data.get("request_id")
         if not isinstance(request_id, str) or len(request_id) > 96:
             request_id = None
+        if kind in {"text", "plan_save", "plan_discard", "plan_delete"} and request_id:
+            key = (kind, request_id)
+            if key in self.control_ids:
+                await self.send(event("epoch", epoch=self.gate.epoch, request_id=request_id))
+                return
+            self.control_ids[key] = True
+            while len(self.control_ids) > SETTINGS.control_id_cache_size:
+                self.control_ids.popitem(last=False)
         if kind == "start":
             self.cancel_calibration()
             if not self.runtime.ready:
@@ -469,6 +594,11 @@ class Session:
                 await self.send(event("error", message=str(exc)))
         elif kind == "settings":
             was_analyzing = self.acoustic_enabled
+            was_speaking = self.speech_enabled
+            if "speech_enabled" in data:
+                self.speech_enabled = data["speech_enabled"] is True
+            if was_speaking != self.speech_enabled and not self.onboarding.active and not self.calibration:
+                await self.interrupt()
             if "acoustic_enabled" in data:
                 self.acoustic_enabled = data["acoustic_enabled"] is True
             if was_analyzing and not self.acoustic_enabled and not self.onboarding.active and not self.calibration:
@@ -483,7 +613,9 @@ class Session:
                 self.api_key = key
             self.web_enabled = bool(data.get("web_enabled", self.web_enabled)) and bool(self.api_key)
             self.barge_in = bool(data.get("barge_in", self.barge_in))
-            await self.send(event("settings", web_enabled=self.web_enabled, has_api_key=bool(self.api_key), api_key_configured=bool(self.api_key), barge_in=self.barge_in, acoustic_enabled=self.acoustic_enabled))
+            if "desktop_enabled" in data:
+                self.desktop_enabled = data["desktop_enabled"] is True
+            await self.send(event("settings", web_enabled=self.web_enabled, has_api_key=bool(self.api_key), api_key_configured=bool(self.api_key), barge_in=self.barge_in, acoustic_enabled=self.acoustic_enabled, desktop_enabled=self.desktop_enabled, speech_enabled=self.speech_enabled))
             await self.status("Ayarlar uygulandı." if not self.web_enabled else "İnternet araştırması açık. Arama sorguları Ollama'ya gönderilir.")
         elif kind == "capture_info":
             self.capture_info = sanitize_capture(data)
@@ -514,6 +646,32 @@ class Session:
                 item["ack"].set_result(True)
         elif kind == "memories":
             await self.send(event("memories", items=self.memory.list()))
+        elif kind in {"plan_get", "apps_get"}:
+            try:
+                if kind == "plan_get":
+                    await self.send_plan_state()
+                else:
+                    await self.send(event("apps", items=apps_catalog()))
+            except PlanError as exc:
+                await self.send(event("error", message=str(exc)))
+        elif kind in {"plan_save", "plan_discard", "plan_delete"}:
+            if not request_id:
+                await self.send(event("error", message="Plan işlemi kimliği eksik. Uygulama penceresini yeniden aç."))
+                return
+            self.cancel_calibration()
+            epoch = await self.interrupt(request_id)
+            if not self.allowed_turn():
+                await self.send(event("error", message="Biraz bekleyip yeniden dene."))
+                return
+            identifier = data.get("plan_id" if kind == "plan_delete" else "draft_id")
+            try:
+                if not isinstance(identifier, str) or len(identifier) != 32:
+                    raise PlanError("Plan kimliği eksik veya geçersiz.")
+                message = self.apply_plan(kind.removeprefix("plan_"), epoch, identifier)
+                await self.send_plan_state(epoch)
+                await self.status(message)
+            except PlanError as exc:
+                await self.send(event("error", message=str(exc)))
         elif kind == "delete_memories":
             self.memory.delete_all()
             await self.send(event("memories", items=[]))
@@ -559,6 +717,8 @@ class Session:
                 return False
             if text:
                 await self.send(event("transcript", role="user", text=text, epoch=epoch))
+            if not self.gate.accepts(epoch):
+                return False
             if text.casefold().strip(".! ") in {"dur", "sus", "sesi kes", "konuşmayı durdur"}:
                 if self.calibration:
                     self.cancel_calibration()
@@ -597,6 +757,10 @@ class Session:
                 self.history.append({"role": "user", "content": text})
                 self.history.append(assistant_entry)
                 self.history = self.history[-20:]
+            if canned is None:
+                canned = await self.local_command(text, epoch, history_before)
+            if not self.gate.accepts(epoch):
+                return False
             command = memory_command(text) if canned is None else None
             if command:
                 action, value = command
@@ -627,6 +791,8 @@ class Session:
                         return
                     if not self.gate.accepts(epoch):
                         return
+                    if not self.speech_enabled and not guided:
+                        continue
                     spoken = clean_spoken(piece)
                     if not spoken:
                         continue
@@ -656,7 +822,7 @@ class Session:
                         timings["tts_first_ms"] = round(tts_seconds * 1000)
                         timings["tts_rtf"] = round(tts_seconds / (pcm.size / rate), 4)
                         await self.send(event("metrics", epoch=epoch, turn_id=turn_id, **timings))
-                    await self.send(event("audio", epoch=epoch, turn_id=turn_id, segment_id=sid, sample_rate=rate, pcm=base64.b64encode(pcm16.tobytes()).decode("ascii"), text=piece))
+                    await self.send(event("audio", epoch=epoch, turn_id=turn_id, segment_id=sid, sample_rate=rate, pcm=base64.b64encode(pcm16.tobytes()).decode("ascii"), text=piece, guided=guided))
 
             speech_task = self.spawn(speak())
             generated = ""
@@ -683,7 +849,8 @@ class Session:
                 else:
                     async for delta in llm.answer(text, history_before, self.memory.list(), self.api_key, self.web_enabled, sources, status,
                                                   profile=self.profile, client=getattr(self.runtime, "ollama_client", None), metrics_callback=model_metrics,
-                                                  acoustic=acoustic_observation if self.acoustic_enabled else None):
+                                                  acoustic=acoustic_observation if self.acoustic_enabled else None,
+                                                  desktop_enabled=self.desktop_enabled, saved_plan=self.saved_plan_for_context()):
                         yield delta
 
             async def produce():
@@ -692,13 +859,13 @@ class Session:
                 async for delta in pieces():
                     if not self.gate.accepts(epoch):
                         raise asyncio.CancelledError
+                    if canned is None and len(generated) + len(delta) > SETTINGS.reply_max_chars:
+                        raise llm.ModelUnavailable("Yanıt metin sınırını aştı ve tamamlanmış sayılmadı. Daha kısa bir bölüm iste.")
                     if canned is None and timings["llm_first_ms"] is None:
                         timings["llm_first_ms"] = round((time.perf_counter() - llm_start) * 1000)
                     generated += delta
                     for piece in buffer.push(delta):
                         await queue.put(piece)
-                    if len(generated) >= 2000:
-                        break
                 for piece in buffer.push("", final=True):
                     await queue.put(piece)
                 await queue.put(None)
@@ -719,6 +886,8 @@ class Session:
                     await asyncio.wait_for(asyncio.shield(acknowledgement), SETTINGS.playback_ack_timeout_s)
             if self.gate.accepts(epoch):
                 await self.send(event("transcript", role="assistant", text=generated, epoch=epoch))
+                if not self.speech_enabled and not guided and self.gate.accepts(epoch):
+                    assistant_entry["content"] = generated
                 await self.send(event("audio_end", epoch=epoch))
                 return True
         except asyncio.CancelledError:
@@ -726,7 +895,7 @@ class Session:
         except llm.ModelUnavailable as exc:
             if self.gate.accepts(epoch):
                 await self.send(event("error", message=str(exc)))
-        except (ProfileError, CalibrationError) as exc:
+        except (ProfileError, CalibrationError, PlanError) as exc:
             if self.gate.accepts(epoch):
                 await self.send(event("error", message=str(exc)))
         except Exception:
@@ -748,6 +917,8 @@ class Session:
         self.gate.active = False
         self.api_key = ""
         self.acoustic_enabled = False
+        self.desktop_enabled = False
+        self.plan_draft = None
         self.capture_info = sanitize_capture(None)
         await self.interrupt()
         for task in list(self.tasks):
@@ -806,11 +977,12 @@ def create_app(runtime: Runtime | None = None):
                 await ws.close(code=1008)
                 return
             if runtime.session is not None:
-                await ws.send_json(event("error", message="Jarvis başka bir sekmede açık. Önce o sekmeyi kapat."))
+                await ws.send_json(event("error", message="Jarvis başka bir pencerede açık. Önce o pencereyi kapat."))
                 await ws.close(code=1008)
                 return
             session = runtime.session = Session(ws, runtime)
-            await session.send(event("hello", epoch=0, ready=runtime.ready, message=runtime.message, version=__version__, demo=runtime.demo))
+            await session.send(event("hello", epoch=0, ready=runtime.ready, message=runtime.message, version=__version__, demo=runtime.demo,
+                                     model=SETTINGS.model, endpoint="local"))
             await session.send(event("ready", ready=runtime.ready, message=runtime.message))
             await session.send_profile()
             while True:
