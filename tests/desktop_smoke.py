@@ -251,10 +251,21 @@ def main():
             if not failure:
                 report["stage"] = "listener_release"
                 released = False
-                while time.monotonic() < deadline - 1:
+                # A 200 ms nonblocking connect can time out on Windows before
+                # Winsock reports a refused loopback connection. Require an
+                # actual refusal, allow its result to arrive, and record only
+                # bounded numeric diagnostics if the listener stays unknown.
+                report["listener_probe_codes"] = []
+                report["listener_probe_ms"] = []
+                for attempt in range(4):
+                    if time.monotonic() >= deadline - 3:
+                        break
+                    probe_started = time.monotonic()
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe_socket:
-                        probe_socket.settimeout(0.2)
+                        probe_socket.settimeout(2.0)
                         code = probe_socket.connect_ex((SETTINGS.host, SETTINGS.port))
+                    report["listener_probe_codes"].append(int(code))
+                    report["listener_probe_ms"].append(round((time.monotonic() - probe_started) * 1000))
                     if code in {errno.ECONNREFUSED, 10061}:
                         released = True
                         break
