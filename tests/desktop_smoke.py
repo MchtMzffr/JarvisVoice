@@ -13,10 +13,17 @@ and empty Python bridge intact. Their contract is documented by Microsoft:
 https://learn.microsoft.com/en-us/dotnet/api/microsoft.web.webview2.core.corewebview2.executescriptasync
 https://learn.microsoft.com/en-us/dotnet/api/microsoft.web.webview2.core.corewebview2.capturepreviewasync
 https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.control.invoke
+
+Listener lifecycle uses the actual owned socket/server and the Windows TCP
+LISTEN table, with a positive baseline before shutdown. API/layout contracts:
+https://learn.microsoft.com/en-us/windows/win32/api/iphlpapi/nf-iphlpapi-getextendedtcptable
+https://learn.microsoft.com/en-us/windows/win32/api/tcpmib/ns-tcpmib-mib_tcprow_owner_pid
+https://learn.microsoft.com/en-us/windows/win32/api/tcpmib/ns-tcpmib-mib_tcptable_owner_pid
+https://learn.microsoft.com/en-us/windows/win32/api/iprtrmib/ne-iprtrmib-tcp_table_class
 """
 from __future__ import annotations
 
-import errno
+import ctypes
 import json
 import os
 from pathlib import Path
@@ -33,6 +40,78 @@ DEMO_ANSWER = "Bu görsel test ekranı. Gerçek konuşma için normal başlatıc
 
 class SmokeFailure(Exception):
     """Messages are fixed diagnostic codes, never native exception text."""
+
+
+class _TcpRowOwnerPid(ctypes.Structure):
+    # DWORD is 32 bits on both Windows architectures; do not use host c_ulong.
+    _fields_ = [(name, ctypes.c_uint32) for name in (
+        "dwState", "dwLocalAddr", "dwLocalPort", "dwRemoteAddr",
+        "dwRemotePort", "dwOwningPid",
+    )]
+
+
+class _TcpTableOwnerPid(ctypes.Structure):
+    _fields_ = [("dwNumEntries", ctypes.c_uint32), ("table", _TcpRowOwnerPid * 1)]
+
+
+def windows_listener_state(port, return_codes):
+    """Return (any IPv4 listener, this process's listener); never expose rows.
+
+    An unknown/error response fails the smoke. Buffer growth is bounded, and
+    native structure offsets/strides account for the documented ABI padding.
+    Only numeric Win32 return codes are retained as diagnostics.
+    """
+    try:
+        get_table = ctypes.WinDLL("iphlpapi.dll", use_last_error=True).GetExtendedTcpTable
+        get_table.argtypes = [
+            ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint32), ctypes.c_int32,
+            ctypes.c_uint32, ctypes.c_int32, ctypes.c_uint32,
+        ]
+        get_table.restype = ctypes.c_uint32
+    except (AttributeError, OSError):
+        raise SmokeFailure("tcp_table_api_unavailable") from None
+
+    insufficient_buffer = 122
+    listener_table_class = 3  # TCP_TABLE_OWNER_PID_LISTENER
+    listening_state = 2      # MIB_TCP_STATE_LISTEN
+    row_offset = _TcpTableOwnerPid.table.offset
+    row_size = ctypes.sizeof(_TcpRowOwnerPid)
+    max_bytes = 1024 * 1024
+    size = ctypes.c_uint32(0)
+    code = int(get_table(None, ctypes.byref(size), False, socket.AF_INET, listener_table_class, 0))
+    return_codes.append(code)
+    if code != insufficient_buffer:
+        raise SmokeFailure("tcp_table_size_query_failed")
+
+    for _ in range(4):
+        capacity = int(size.value)
+        if not row_offset <= capacity <= max_bytes:
+            raise SmokeFailure("tcp_table_buffer_bound")
+        buffer = ctypes.create_string_buffer(capacity)
+        code = int(get_table(buffer, ctypes.byref(size), False, socket.AF_INET, listener_table_class, 0))
+        return_codes.append(code)
+        if code == insufficient_buffer:
+            continue
+        if code != 0:
+            raise SmokeFailure("tcp_table_query_failed")
+        if not row_offset <= size.value <= capacity:
+            raise SmokeFailure("tcp_table_size_invalid")
+        count = ctypes.c_uint32.from_buffer(buffer).value
+        if count > (int(size.value) - row_offset) // row_size:
+            raise SmokeFailure("tcp_table_row_bound")
+        any_listener = False
+        owned_listener = False
+        own_pid = os.getpid()
+        for index in range(count):
+            row = _TcpRowOwnerPid.from_buffer(buffer, row_offset + index * row_size)
+            if row.dwState != listening_state:
+                continue  # TIME_WAIT, CLOSED and established sockets are not listeners.
+            local_port = socket.ntohs(row.dwLocalPort & 0xFFFF)
+            if local_port == port:
+                any_listener = True
+                owned_listener = owned_listener or row.dwOwningPid == own_pid
+        return any_listener, owned_listener
+    raise SmokeFailure("tcp_table_growth_limit")
 
 
 def emit_report(report):
@@ -87,10 +166,16 @@ def main():
             os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
             report["stage"] = "imports"
             import webview
-            from jarvis.desktop import run_desktop
+            from jarvis.desktop import LocalServer, run_desktop
             from jarvis.config import SETTINGS
 
             original_create = webview.create_window
+            owned_hosts = []
+
+            def host_factory(**kwargs):
+                host = LocalServer(**kwargs)
+                owned_hosts.append(host)
+                return host
 
             def loaded(window):
                 with callback_lock:
@@ -181,6 +266,23 @@ def main():
                     if not all(report["checks"].values()):
                         raise SmokeFailure("native_browser_capability_missing")
 
+                    report["stage"] = "listener_positive_baseline"
+                    if len(owned_hosts) != 1:
+                        raise SmokeFailure("owned_server_missing")
+                    host = owned_hosts[0]
+                    report["checks"]["owned_listener_open_before_close"] = (
+                        host.listener is not None and host.listener.fileno() >= 0
+                    )
+                    servers = getattr(host.server, "servers", None)
+                    report["checks"]["uvicorn_listening_before_close"] = bool(servers) and all(
+                        server.is_serving() for server in servers
+                    )
+                    report["tcp_table_startup_rcs"] = []
+                    present, owned = windows_listener_state(SETTINGS.port, report["tcp_table_startup_rcs"])
+                    report["checks"]["os_listener_seen_before_close"] = present and owned
+                    if not all(report["checks"].values()):
+                        raise SmokeFailure("listener_positive_baseline_failed")
+
                     report["stage"] = "silent_chat_roundtrip"
                     submitted = evaluate("""(() => {
                       const speech = document.getElementById('speech-enabled');
@@ -240,7 +342,7 @@ def main():
             webview.create_window = create_window
             report["stage"] = "desktop_start"
             try:
-                run_desktop(demo=True)
+                run_desktop(demo=True, host_factory=host_factory)
             except BaseException:
                 fail("desktop_start_or_lifecycle_failed")
             finally:
@@ -250,37 +352,30 @@ def main():
                 fail("loaded_callback_incomplete")
             if not failure:
                 report["stage"] = "listener_release"
-                released = False
-                # A 200 ms nonblocking connect can time out on Windows before
-                # Winsock reports a refused loopback connection. Require an
-                # actual refusal, allow its result to arrive, and record only
-                # bounded numeric diagnostics if the listener stays unknown.
-                report["listener_probe_codes"] = []
-                report["listener_probe_ms"] = []
-                for attempt in range(4):
-                    if time.monotonic() >= deadline - 3:
-                        break
-                    probe_started = time.monotonic()
-                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe_socket:
-                        probe_socket.settimeout(2.0)
-                        code = probe_socket.connect_ex((SETTINGS.host, SETTINGS.port))
-                    report["listener_probe_codes"].append(int(code))
-                    report["listener_probe_ms"].append(round((time.monotonic() - probe_started) * 1000))
-                    if code in {errno.ECONNREFUSED, 10061}:
-                        released = True
-                        break
-                    time.sleep(0.1)
-                report["checks"]["listener_released"] = released
-                report["checks"]["server_thread_stopped"] = not any(
-                    thread.name == "jarvis-local-server" and thread.is_alive() for thread in threading.enumerate()
+                host = owned_hosts[0]
+                report["checks"]["owned_listener_closed"] = host.listener is not None and host.listener.fileno() == -1
+                report["checks"]["owned_server_finished"] = host.finished.is_set()
+                report["checks"]["server_thread_stopped"] = host.thread is not None and not host.thread.is_alive()
+                servers = getattr(host.server, "servers", None)
+                report["checks"]["uvicorn_servers_stopped"] = bool(servers) and all(
+                    not server.is_serving() for server in servers
                 )
-                if not released or not report["checks"]["server_thread_stopped"]:
+                report["tcp_table_shutdown_rcs"] = []
+                present, _ = windows_listener_state(SETTINGS.port, report["tcp_table_shutdown_rcs"])
+                report["checks"]["os_listener_absent_after_close"] = not present
+                report["checks"]["listener_released"] = all(report["checks"][key] for key in (
+                    "owned_listener_closed", "owned_server_finished", "server_thread_stopped",
+                    "uvicorn_servers_stopped", "os_listener_absent_after_close",
+                ))
+                if not report["checks"]["listener_released"]:
                     fail("server_shutdown_incomplete")
             if failure:
                 report["error_code"] = failure[0]
             else:
                 report["status"] = "passed"
                 report["stage"] = "complete"
+    except SmokeFailure as exc:
+        report["error_code"] = str(exc)
     except BaseException:
         report["error_code"] = "smoke_setup_or_cleanup_failed"
     finally:
