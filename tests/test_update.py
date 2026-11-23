@@ -25,7 +25,9 @@ dependencies = ["httpx==0.28.1"]
 class UpdateTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
-        self.root = Path(self.temporary.name)
+        # Windows TEMP may use an 8.3 alias. Canonicalize the fixture once so
+        # injected write failures target the same path as the updater's roots.
+        self.root = Path(self.temporary.name).resolve()
         self.source = self.root / "new package"
         self.target = self.root / "installed Jarvis"
         self.source.mkdir()
