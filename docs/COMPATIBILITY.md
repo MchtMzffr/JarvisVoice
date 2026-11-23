@@ -2,7 +2,7 @@
 
 | Bileşen | Sabit sürüm / sözleşme | Doğrulama |
 |---|---|---|
-| Uygulama | 0.2.0 / protokol 2 | 94 Python + 25 JavaScript testi |
+| Uygulama | 0.2.1 / protokol 2 | Linux: 107 Python geçti, 3 Windows testi atlandı; 25 JavaScript geçti |
 | Python | 3.11.18 | Linux kurulum ve gerçek ses kontrolü; Windows için yönetilen sürüm isteği |
 | Ollama | Kullanıcıda 0.40.17 | Kullanıcının model/GPU testi; paket değiştirmez |
 | Model | gpt-oss:20b / think low / 4096 | Kullanıcının mevcut kurulumu |
@@ -23,8 +23,8 @@ Bağımlılıklar `pyproject.toml` ve `uv.lock` içinde sabitlenmiştir. Bunlar�
 
 | Kaynak → hedef | Destek / işlem |
 |---|---|
-| Tamamlanmış 0.1.0 → 0.2.0 | GUNCELLE.cmd; mevcut Python/model/veri korunur, değişen kod yedeklenir. |
-| 0.2.0 → 0.2.0 | Aynı çevrimdışı güncelleyici yeniden uygulamayı destekler. |
+| Tamamlanmış 0.1.0 veya 0.2.0 → 0.2.1 | GUNCELLE.cmd; mevcut Python/model/veri korunur, değişen kod yedeklenir. |
+| 0.2.1 → 0.2.1 | Aynı çevrimdışı güncelleyici yeniden uygulamayı destekler. |
 | Yeni kurulum | KUR.cmd; mevcut Ollama modeli kullanılır. |
 | Protokol 1 arayüz → protokol 2 sunucu | Reddedilir; arayüz ve sunucu birlikte güncellenmeli. |
 | SQLite user_version 1 | Aynı şema; migration gerekmez. |
@@ -58,3 +58,5 @@ Akustik ölçüm ek NumPy dışı bağımlılık gerektirmez. emotion2vec veya b
 ## Lisans bilgisi
 
 Bu ZIP model ağırlıklarını veya üçüncü taraf paket ikililerini dağıtmaz; kurulum bunları ilgili resmî kaynaklardan alır. GPT-OSS ve EMA model/kodları Apache-2.0; faster-whisper ve Whisper/Silero bileşenleri MIT; PyTorch BSD türü lisans; normalizer-tr Apache-2.0; uv MIT/Apache-2.0; tiktoken MIT lisanslıdır. Bağımlılıkların tam lisans/notice dosyaları kurulan paketlerin içindedir. Uygulama kaynak kodu bu kullanıcı için oluşturulmuştur; ticari bir ürünün tamamına yönelik lisans denetimi yapılmış sayılmaz.
+
+0.2.1 yalnız Windows port kontrolü/hata görünürlüğü düzeltmesi ve geliştirme kayıtları ekler; protokol 2, veri şemaları 1 ve bağımlılıklar korunur.

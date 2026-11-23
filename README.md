@@ -1,10 +1,34 @@
-# Jarvis Voice 0.2.0
+# JarvisVoice — 0.2.1
 
 Windows'taki mevcut **Ollama + gpt-oss:20b** kurulumuyla çalışan Türkçe sesli sohbet uygulaması. Beğendiğin **EMA Lightning sesi korunuyor**. Bu sürüm sesli tanışma, mikrofon kontrolü, tercihlerin kalıcı kaydı, süre ölçümleri ve isteğe bağlı yerel akustik inceleme ekler.
 
 **Duygu veya hastalık sınıflandırıcısı içermez.** Sesin ölçülebilir özelliklerini çıkarır; kişinin ne hissettiğini onun anlatımından öğrenmeye çalışır. Destekleyici sohbet hedeflenir; klinik etkinlik veya terapi hizmeti doğrulanmış değildir. Teknik kanıtlar ve geliştirme sınırları: `docs/SES_ANALIZI_KANITLARI.md`.
 
-## Zaten çalışan 0.1.0 kurulumu varsa
+## GitHub üzerinden geliştirme
+
+Depo: [MchtMzffr/JarvisVoice](https://github.com/MchtMzffr/JarvisVoice). Ana dal: `main`.
+
+- [Çalışma durumu](docs/PROJECT_STATE.md): yeni bir çalışmada ilk okunacak kısa kayıt.
+- [Geliştirme rehberi](https://github.com/MchtMzffr/JarvisVoice/blob/main/AGENTS.md): sözleşmeler, parametre kaynağı ve doğrulama kuralları.
+- [Değişiklik geçmişi](https://github.com/MchtMzffr/JarvisVoice/blob/main/CHANGELOG.md): sürümlere göre değişen davranışlar.
+- [Yol haritası](docs/ROADMAP.md): sıradaki işler ve kabul ölçütleri.
+- [Otomatik kontroller](https://github.com/MchtMzffr/JarvisVoice/actions): Windows/Linux üzerinde model indirmeyen güncelleyici, profil ve JavaScript testleri. Tam ses/LLM uygulama testi değildir.
+
+Yeni kaynak kopyası için:
+
+```powershell
+git clone https://github.com/MchtMzffr/JarvisVoice.git JarvisVoice-Kaynak
+```
+
+Sonraki kaynak güncellemelerinde, bu klon klasöründe `git pull --ff-only` kullanılır. Mevcut çalışan kurulum ayrı klasördeyse klondaki `GUNCELLE.cmd` ile ona uygulanır. Git kullanmadan GitHub'da **Code → Download ZIP** ile aynı kaynak alınabilir. Çalışan kurulumdaki model/veri klasörlerini kaynak deposuna kopyalamak gerekmez.
+
+## 0.2.1: Windows port kontrolü düzeltmesi
+
+0.2.0 güncelleyicisinde görülen “8765 portu kontrol edilemedi” hatası için Windows kontrol yolu değişti. TCP bağlantısının 0,5 saniyede sonuçlanmasını beklemek yerine Windows'un exclusive bind kontrolü kullanılır; ağ servisi açılmaz. Kullanımda veya sonucu bilinmeyen port güncellemeyi durdurur. Yeni hata mesajı işlem aşamasını ve sayısal OS kodlarını verir.
+
+Eski genel mesaj gerçek Windows hata kodunu sakladığından önceki olayın kesin nedeni belirlenemedi. Düzeltme timeout bağımlılığını kaldırır; Windows kabul sonucu ayrıca izlenir. [Teknik açıklama](docs/PORT_CHECK_FIX.md).
+
+## Zaten çalışan bir kurulumu güncelleme
 
 1. Açık Jarvis terminalini **Ctrl+C** ile kapat. Ollama açık kalabilir.
 2. Yeni ZIP'i **eski kurulumdan ayrı, onun içine girmeyen bir klasöre** çıkar. ZIP içinden çalıştırma.
@@ -13,7 +37,7 @@ Windows'taki mevcut **Ollama + gpt-oss:20b** kurulumuyla çalışan Türkçe ses
 
 Güncelleyici mevcut uygulamaya özel Python'u kullanır. Bağımlılık listesi değişmediği için paketleri, GPT-OSS'u ve yaklaşık 525 MB ses dosyasını yeniden indirmez. `data`, `.venv` ve `.runtime` klasörlerini değiştirmez. Değişen eski kodu `backups` altında SHA256 bilgileriyle yedekler; normal yazma hatasında değişiklikleri geri almaya çalışır. Windows dosya seçicisinin gerçek Windows çalışması bu geliştirme ortamında sınanmadı; taşınabilir güncelleme mantığının testleri pakettedir.
 
-Bu yol yalnız tamamlanmış 0.1.0 veya 0.2.0 kurulumu içindir. **Yeni boş klasörde BASLAT.cmd açmak yerine eski kurulum üzerinden devam et.** Güncelleme sonrası yeni paketin ayrı klasörü çalışma için gerekli değildir; ZIP'i yedek tutabilirsin.
+Bu yol tamamlanmış 0.1.0, 0.2.0 veya 0.2.1 kurulumu içindir. **Yeni boş klasörde BASLAT.cmd açmak yerine eski kurulum üzerinden devam et.** Güncelleme sonrası yeni paketin ayrı klasörü çalışma için gerekli değildir; ZIP'i yedek tutabilirsin.
 
 ## İlk kez kuruyorsan
 

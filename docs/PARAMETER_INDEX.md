@@ -1,4 +1,4 @@
-# PARAMETER_INDEX — 0.2.0
+# PARAMETER_INDEX — 0.2.1
 
 Ayarlanabilir çalışma parametreleri için tek yetkili tanım `jarvis/config.py::Settings`. Tablo bu tanımdan üretilmiştir; çalışma sırasında Markdown okunmaz. Format/şema sabitlerinin konumları aşağıdadır.
 
@@ -76,3 +76,5 @@ Ayarlanabilir çalışma parametreleri için tek yetkili tanım `jarvis/config.p
 ## Yorumlama
 
 `keep_alive` modelin boşta tutulma isteğidir; GPU yerleşim garantisi değildir. `asr_threads` ve `tts_threads` varsayılanları kullanıcının Windows işlemcisinde en iyi sonucu verdiği kanıtlanmış değerler değildir. Kalibrasyon eşikleri bir kısa kontrolün sezgileridir. F0 periyodiklik eşiği ve kapsaması duygu güven skoru değildir. Kullanıcı API anahtarı, ham ses ve ölçüm geçmişi bu parametre dosyalarına yazılmaz.
+
+- Güncelleyicinin uygulama import etmeden kullandığı `UPDATER_PORT=8765`: `update_jarvis.py`; `Settings.port` ile uyumlu tutulmalıdır.

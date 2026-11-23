@@ -1,4 +1,4 @@
-"""Offline, code-only Jarvis Voice 0.1.0 -> 0.2.0 update with verified backups.
+"""Offline, code-only Jarvis Voice 0.1.0/0.2.0 -> 0.2.1 update with verified backups.
 
 Run with the installed app's Python 3.11. No application module is imported;
 models, profiles, memories, virtual environments and global settings are never
@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import ast
 from datetime import datetime, timezone
+import errno
 import hashlib
 import json
 import os
@@ -21,8 +22,8 @@ import tomllib
 import uuid
 
 
-RELEASE_VERSION = "0.2.0"
-SUPPORTED_TARGETS = {"0.1.0", "0.2.0"}
+RELEASE_VERSION = "0.2.1"
+SUPPORTED_TARGETS = {"0.1.0", "0.2.0", "0.2.1"}
 RELEASE_DIRS = {"jarvis", "tests", "docs"}
 RELEASE_FILES = {
     "KUR.cmd", "BASLAT.cmd", "pyproject.toml", "uv.lock", "README.md",
@@ -30,6 +31,7 @@ RELEASE_FILES = {
 }
 IGNORED_NAMES = {"__pycache__", ".venv", ".runtime", "data", "backups", ".git"}
 MAX_FILE_BYTES = 16 * 1024 * 1024
+UPDATER_PORT = 8765
 REPARSE_FLAG = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
 
 
@@ -118,19 +120,68 @@ def _project(root: Path) -> dict:
         raise UpdateError("Paket bağımlılık tanımı okunamadı; dosyalar değiştirilmedi.") from None
 
 
+def _port_check_error(stage: str, exc: OSError) -> UpdateError:
+    """Report only the operation, exception class and numeric OS error codes."""
+    codes = []
+    for name in ("errno", "winerror"):
+        value = getattr(exc, name, None)
+        codes.append(f"{name}={value if type(value) is int else 'yok'}")
+    return UpdateError(
+        f"{UPDATER_PORT} portu kontrol edilemedi ({stage}; {type(exc).__name__}; "
+        + "; ".join(codes)
+        + "). Portun boş olduğu doğrulanamadı; kurulum kodu değiştirilmedi."
+    )
+
+
 def jarvis_port_in_use() -> bool:
-    # Any listener on this application's fixed port blocks the update. It is
-    # never killed, even when it is some other application.
+    """Return occupied/free, or raise when the operating system cannot tell.
+
+    Windows uses a short-lived exclusive wildcard bind instead of a timed TCP
+    connection. A specific-address bind can coexist with some wildcard sockets
+    on Windows, so 0.0.0.0 is required for this probe. No listen, accept, connect,
+    or SO_REUSEADDR operation is performed. An occupied port is never killed.
+
+    Bind can conservatively reject a port whose earlier connections are still
+    draining. Access errors may also mean a reservation or system policy; they
+    are not evidence that Jarvis is running or that the port is free.
+    """
+    if sys.platform == "win32":
+        exclusive = getattr(socket, "SO_EXCLUSIVEADDRUSE", None)
+        if exclusive is None:
+            raise UpdateError(
+                f"{UPDATER_PORT} portu kontrol edilemedi: Windows SO_EXCLUSIVEADDRUSE "
+                "özelliği yok. Portun boş olduğu doğrulanamadı; kurulum kodu değiştirilmedi."
+            )
+        stage = "socket"
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+                stage = "setsockopt"
+                probe.setsockopt(socket.SOL_SOCKET, exclusive, 1)
+                stage = "bind"
+                occupied = False
+                try:
+                    probe.bind(("0.0.0.0", UPDATER_PORT))
+                except OSError as exc:
+                    if exc.errno == errno.EADDRINUSE or getattr(exc, "winerror", None) == 10048:
+                        occupied = True
+                    else:
+                        raise
+                stage = "close"
+            return occupied
+        except OSError as exc:
+            raise _port_check_error(stage, exc) from None
+
+    # Preserve the existing non-Windows probe. A timeout stays unknown rather
+    # than being converted to 'free'; diagnostics now retain its type/codes.
     try:
-        with socket.create_connection(("127.0.0.1", 8765), timeout=0.5):
+        with socket.create_connection(("127.0.0.1", UPDATER_PORT), timeout=0.5):
             return True
     except ConnectionRefusedError:
         return False
     except OSError as exc:
-        # A timeout or network-policy failure cannot prove the app is closed.
         if getattr(exc, "winerror", None) == 10061:
             return False
-        raise UpdateError("8765 portu kontrol edilemedi. Jarvis'i kapatıp yeniden dene.") from None
+        raise _port_check_error("connect", exc) from None
 
 
 def _collect_release(source: Path) -> dict[str, bytes]:
@@ -210,7 +261,7 @@ def _update(source: Path, target: Path, *, port_check=jarvis_port_in_use) -> dic
             raise UpdateError("Tamamlanmış kurulum bulunamadı. Çalışan eski klasördeki BASLAT.cmd dosyasını seç.")
     old_version, new_version = _version(target), _version(source)
     if old_version not in SUPPORTED_TARGETS or new_version != RELEASE_VERSION:
-        raise UpdateError(f"Bu güncelleme yalnız 0.1.0/0.2.0 kurulumunu {RELEASE_VERSION} sürümüne taşır.")
+        raise UpdateError(f"Bu güncelleme yalnız 0.1.0/0.2.0/0.2.1 kurulumunu {RELEASE_VERSION} sürümüne taşır.")
     old_project, new_project = _project(target), _project(source)
     if new_project.get("version") != RELEASE_VERSION:
         raise UpdateError("Yeni paket sürüm tanımları birbiriyle uyuşmuyor.")

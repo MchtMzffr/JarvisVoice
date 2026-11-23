@@ -1,4 +1,4 @@
-# Jarvis Voice sözleşmeleri — uygulama 0.2.0 / protokol 2
+# Jarvis Voice sözleşmeleri — uygulama 0.2.1 / protokol 2
 
 Bu uygulama bağımsız bir prototiptir; Decision Ecosystem depolarını/core bağımlılıklarını değiştirmez. Çalışma parametreleri için tek yetkili tanım `jarvis/config.py::Settings`, veri sözleşmeleri için `jarvis/contracts.py` ve `jarvis/profile.py` esas alınır. `PARAMETER_INDEX.md` bu kaynaklardan üretilir. ASR, TTS, LLM ve web çağrıları ayrı adaptörlerdir.
 
@@ -91,4 +91,8 @@ Yaklaşık gecikme ayrışımı: T_endpoint + max(T_ASR, T_analiz) + T_ilk_sesle
 
 ## Sürümleme ve değişiklik kapısı
 
-Uygulama SemVer **0.2.0**; dağıtım öncesi deneysel 0.x aşamasıdır. Protokol **2**; profil/kalibrasyon/gözlem şemaları **1**; SQLite user_version **1**. 0.1.0 verisi korunur, 0.1 frontend desteği 0.2.0 ile biter; bütün dosyaları birlikte taşıyan güncelleyici geçiş yoludur. Gelecekte protokol kırılması yeni numarayla, kalıcı şema kırılması açık migration ve yedek/geri alma tarifiyle yayımlanmalıdır. Yeni deprecation tarihleri o sürümün değişiklik kaydında duyurulur; burada verilmemiş takvim taahhüdü yoktur.
+Uygulama SemVer **0.2.1**; dağıtım öncesi deneysel 0.x aşamasıdır. Protokol **2**; profil/kalibrasyon/gözlem şemaları **1**; SQLite user_version **1**. 0.1.0 verisi korunur, 0.1 frontend desteği 0.2.0 ile biter; bütün dosyaları birlikte taşıyan güncelleyici geçiş yoludur. Gelecekte protokol kırılması yeni numarayla, kalıcı şema kırılması açık migration ve yedek/geri alma tarifiyle yayımlanmalıdır. Yeni deprecation tarihleri o sürümün değişiklik kaydında duyurulur; burada verilmemiş takvim taahhüdü yoktur.
+
+## 0.2.1 düzeltmesi
+
+Port kontrolünün Windows uygulaması ve hata görünürlüğü değişti; protokol/şema/bağımlılık değişimi yok. Karar tablosu ve kalan sınır [PORT_CHECK_FIX.md](PORT_CHECK_FIX.md) içinde.

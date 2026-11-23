@@ -3,7 +3,7 @@ setlocal
 chcp 65001 >nul
 set "JARVIS_UPDATE_SOURCE=%~dp0"
 set "PYTHONUTF8=1"
-echo Jarvis Voice 0.2.0 - mevcut kurulumu guncelle
+echo Jarvis Voice 0.2.1 - mevcut kurulumu guncelle
 echo Once acik Jarvis terminalini Ctrl+C ile kapat.
 echo Acilan pencereden CALISAN ESKI klasordeki BASLAT.cmd dosyasini sec.
 echo.

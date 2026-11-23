@@ -34,12 +34,12 @@ class UpdateTests(unittest.TestCase):
             (self.source / name).write_bytes(("new " + name).encode())
         for name in updater.RELEASE_DIRS:
             (self.source / name).mkdir()
-        (self.source / "jarvis" / "__init__.py").write_text('__version__ = "0.2.0"\n', encoding="utf-8")
+        (self.source / "jarvis" / "__init__.py").write_text(f'__version__ = "{updater.RELEASE_VERSION}"\n', encoding="utf-8")
         (self.source / "jarvis" / "server.py").write_bytes(b"new server")
         (self.source / "jarvis" / "profile.py").write_bytes(b"new profile code")
         (self.source / "docs" / "guide.md").write_bytes(b"new guide")
         (self.source / "tests" / "test_sample.py").write_bytes(b"new test")
-        (self.source / "pyproject.toml").write_text(PROJECT.format(version="0.2.0"), encoding="utf-8")
+        (self.source / "pyproject.toml").write_text(PROJECT.format(version=updater.RELEASE_VERSION), encoding="utf-8")
         (self.target / "jarvis").mkdir()
         (self.target / "jarvis" / "__init__.py").write_text('__version__ = "0.1.0"\n', encoding="utf-8")
         (self.target / "jarvis" / "server.py").write_bytes(b"old server")
@@ -85,7 +85,7 @@ class UpdateTests(unittest.TestCase):
         self.assertNotIn(".env", after)
         self.assertNotIn(".jarvis-update.lock", after)
         self.assertEqual(result["from_version"], "0.1.0")
-        self.assertEqual(result["to_version"], "0.2.0")
+        self.assertEqual(result["to_version"], updater.RELEASE_VERSION)
 
     def test_backup_manifest_and_original_bytes_are_verified(self):
         before = self.snapshot()

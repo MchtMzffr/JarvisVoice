@@ -11,7 +11,7 @@ set "PYTHONUTF8=1"
 set "ORT_DISABLE_TELEMETRY=1"
 set "HF_HUB_DISABLE_TELEMETRY=1"
 set "HF_HUB_DISABLE_IMPLICIT_TOKEN=1"
-echo Jarvis Voice 0.2.0 - ilk kurulum
+echo Jarvis Voice 0.2.1 - ilk kurulum
 echo Mevcut Ollama ve GPT-OSS modeli kullanilacak.
 echo Ilk kurulumda Python, paketler ve yaklasik 525 MB ses modeli indirilir.
 echo.

@@ -1,4 +1,16 @@
-# Doğrulama — Jarvis Voice 0.2.0
+# Doğrulama — Jarvis Voice 0.2.1
+
+## 0.2.1 hata düzeltmesinin doğrulanması
+
+23 Kasım 2026, Linux geliştirme ortamı: **110 Python testi keşfedildi; 107 geçti, yalnız gerçek Windows gerektiren 3 test atlandı. 25 JavaScript testi geçti.** Bu sonuç Windows işletim sistemi socket testinin geçtiği anlamına gelmez. Yeni Windows testleri GitHub Actions Windows runner'da çalışacak; sonucu ayrıca izlenir.
+
+Yeni port testleri boş/kullanımda/bilinmiyor ayrımını, socket kapanmasını, hata kodlarının görünürlüğünü, özel hata metninin gizlenmesini ve ilk/ikinci kontrol başarısızlığında dosya yazılmamasını doğrular. Native Windows testleri kullanıcıdaki 8765 yerine geçici portlar kullanır. Detay: [PORT_CHECK_FIX.md](PORT_CHECK_FIX.md).
+
+Bağımlılık listesi, Python gereksinimi, EMA adaptörü ve örnek WAV 0.2.0 ile birebir aynı. Güncelleyici kaynak sürümü/manifesti ve CMD dosyalarının CRLF satır sonları doğrulandı. 0.2.1 gerçek kullanıcı Windows güncellemesi henüz bildirilmedi.
+
+Aşağıdaki kayıtlar 0.2.0 sürümünde daha önce yapılan kanıtları korur; yeni sürümde yeniden yapılmış ses/model ölçümü gibi yorumlanmamalıdır.
+
+## Tarihsel kayıt — Jarvis Voice 0.2.0
 
 Tarih: 23 Kasım 2026. Aşağıdaki sonuçlar kapsamlarına göre ayrılmıştır; geçen yazılım testleri insan duygu sınıflandırması veya klinik etkinlik ölçümü değildir.
 
